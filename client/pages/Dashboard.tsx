@@ -62,7 +62,7 @@ export default function Dashboard() {
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome to AutoDeploy.AI</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome to ZeroOps</h1>
               <p className="text-slate-400 text-sm sm:text-base">Deploy your applications with AI-powered automation</p>
             </div>
           </div>
