@@ -101,7 +101,7 @@ export default function HeroSection() {
               className="relative"
             >
               <div className="bg-card rounded-3xl p-8 shadow-2xl transition-colors mt-32 dark:border dark:border-white/10">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center bg-card/80 rounded-2xl p-4 transition-colors dark:bg-card/50">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-0 items-center bg-card/80 rounded-2xl p-0 transition-colors dark:bg-card/50">
                   {/* Code Commit */}
                   <div className="flex flex-col items-center space-y-2 group">
                     <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3 dark:from-lime-400 dark:to-lime-500">
@@ -112,11 +112,10 @@ export default function HeroSection() {
                     </span>
                   </div>
 
+
                   {/* Arrow */}
                   <div className="flex justify-center">
-                    <div className="w-8 h-8 bg-gradient-to-r from-brand-400 to-brand-600 rounded-full animate-pulse flex items-center justify-center dark:from-cyan-400 dark:to-cyan-600">
-                      <ArrowRight className="w-4 h-4 text-white" />
-                    </div>
+                    <img src="/fast-forward-unscreen.gif" className="w-16 h-16 rounded-full" alt="fast forward" />
                   </div>
 
                   {/* AI Analyzer */}
@@ -129,11 +128,10 @@ export default function HeroSection() {
                     </span>
                   </div>
 
+
                   {/* Arrow */}
                   <div className="flex justify-center">
-                    <div className="w-8 h-8 bg-gradient-to-r from-brand-400 to-brand-600 rounded-full animate-pulse flex items-center justify-center dark:from-cyan-400 dark:to-cyan-600">
-                      <ArrowRight className="w-4 h-4 text-white" />
-                    </div>
+                    <img src="/fast-forward-unscreen.gif" className="w-16 h-16 rounded-full" alt="fast forward" />
                   </div>
 
                   {/* Deployment */}
