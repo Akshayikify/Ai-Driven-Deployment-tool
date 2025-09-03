@@ -6,10 +6,7 @@ export default function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center">
-        
-              </div>
-              <span className="text-xl font-bold">AutoDeploy.AI</span>
+              <span className="text-xl font-bold">ZeroOps</span>
             </div>
             <p className="text-gray-400 text-sm">
               Automate your deployments with AI-powered intelligence. Faster,

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { useRef } from "react";
 
 export default function CTASection() {
@@ -16,6 +16,16 @@ export default function CTASection() {
 
   const handleStartTrial = () => {
     navigate('/dashboard');
+  };
+
+  const buttonVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  const trustVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: { opacity: 1, scale: 1 }
   };
 
   return (
@@ -70,46 +80,60 @@ export default function CTASection() {
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
-            <Button
-              size="lg"
-              onClick={handleStartTrial}
-              className="text-xl px-12 py-8 bg-white text-brand-700 hover:bg-gray-100 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 font-bold"
-            >
-              Start Free Trial
-              <span className="ml-3 text-2xl">🚀</span>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-xl px-12 py-8 border-2 border-black dark:border-white text-black dark:text-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-brand-700 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 font-bold"
-            >
-              Request a Demo
-              <span className="ml-3 text-2xl">📺</span>
-            </Button>
-          </div>
+          <motion.div
+            className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"
+            initial="hidden"
+            whileInView="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.2 } } }}
+          >
+            <motion.div variants={buttonVariants}>
+              <Button
+                size="lg"
+                onClick={handleStartTrial}
+                className="text-xl px-12 py-8 bg-white text-brand-700 hover:bg-gray-100 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 font-bold"
+              >
+                Start Free Trial
+                <span className="ml-3 text-2xl">🚀</span>
+              </Button>
+            </motion.div>
+            <motion.div variants={buttonVariants}>
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-xl px-12 py-8 border-2 border-black dark:border-white text-black dark:text-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-brand-700 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 font-bold"
+              >
+                Request a Demo
+                <span className="ml-3 text-2xl">📺</span>
+              </Button>
+            </motion.div>
+          </motion.div>
 
           {/* Trust Indicators */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12"
+            initial="hidden"
+            whileInView="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.3 } } }}
+          >
+            <motion.div variants={trustVariants} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
               <div className="text-3xl font-bold text-black dark:text-white mb-2">
                 Free Forever
               </div>
               <div className="text-black/80 dark:text-white/80">No credit card required</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+            </motion.div>
+            <motion.div variants={trustVariants} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
               <div className="text-3xl font-bold text-black dark:text-white mb-2">
                 5-Min Setup
               </div>
               <div className="text-black/80 dark:text-white/80">Deploy in minutes, not hours</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+            </motion.div>
+            <motion.div variants={trustVariants} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
               <div className="text-3xl font-bold text-black dark:text-white mb-2">
                 24/7 Support
               </div>
               <div className="text-black/80 dark:text-white/80">Expert help when you need it</div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
         </div>
       </div>

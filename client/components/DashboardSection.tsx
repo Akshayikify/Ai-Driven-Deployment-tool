@@ -1,8 +1,17 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { motion, useScroll, useTransform } from "framer-motion";
 
 export default function DashboardSection() {
   const [activeTab, setActiveTab] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+
+  const y = useTransform(scrollYProgress, [0, 1], [50, -50]);
+  const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
 
   const dashboardViews = [
     {
@@ -38,7 +47,11 @@ export default function DashboardSection() {
   ];
 
   return (
-    <section className="py-24 bg-background relative overflow-hidden">
+    <motion.section
+      ref={sectionRef}
+      className="py-24 bg-background relative overflow-hidden"
+      style={{ y, opacity }}
+    >
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-5xl md:text-6xl font-bold mb-6">
@@ -292,6 +305,6 @@ export default function DashboardSection() {
           </div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

@@ -15,13 +15,8 @@ export default function DashboardHeader() {
         <nav className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-neon-blue to-neon-purple rounded-xl flex items-center justify-center transform rotate-3 shadow-lg">
-              <span className="text-white font-bold text-lg filter drop-shadow-sm">
-                🚀
-              </span>
-            </div>
             <span className="text-xl sm:text-2xl font-bold gradient-text-neon font-mono tracking-tight">
-              AutoDeploy.AI
+              ZeroOps
             </span>
           </div>
 
@@ -49,20 +44,6 @@ export default function DashboardHeader() {
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neon-blue to-neon-cyan group-hover:w-full transition-all duration-300"></span>
             </a>
             <a
-              href="/pricing"
-              className="text-slate-300 hover:text-neon-blue transition-all duration-300 font-medium relative group text-sm lg:text-base"
-            >
-              Pricing
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neon-blue to-neon-cyan group-hover:w-full transition-all duration-300"></span>
-            </a>
-            <a
-              href="/docs"
-              className="text-slate-300 hover:text-neon-blue transition-all duration-300 font-medium relative group text-sm lg:text-base"
-            >
-              Docs
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neon-blue to-neon-cyan group-hover:w-full transition-all duration-300"></span>
-            </a>
-            <a
               href="/contact"
               className="text-slate-300 hover:text-neon-blue transition-all duration-300 font-medium relative group text-sm lg:text-base"
             >
@@ -74,12 +55,6 @@ export default function DashboardHeader() {
           {/* Right Side Buttons */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             <DarkModeToggle />
-            <button className="hidden sm:inline-flex text-slate-300 hover:text-neon-blue border border-transparent hover:border-neon-blue/30 transition-all duration-300 rounded-xl px-3 sm:px-4 py-2 text-sm">
-              Login
-            </button>
-            <button className="bg-gradient-to-r from-neon-blue to-neon-purple hover:from-neon-cyan hover:to-neon-pink text-white font-semibold shadow-lg hover:shadow-neon-blue/30 transition-all duration-300 transform hover:scale-105 rounded-xl px-3 sm:px-6 py-2 border border-neon-blue/20 text-sm">
-              Signup
-            </button>
 
             {/* Mobile Menu Button */}
             <button
