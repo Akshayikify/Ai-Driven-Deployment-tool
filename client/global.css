@@ -1,0 +1,279 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Brand colors - Futuristic neon gradient */
+    --brand-50: 240 100% 98%;
+    --brand-100: 237 100% 95%;
+    --brand-200: 236 84% 88%;
+    --brand-300: 236 68% 79%;
+    --brand-400: 237 56% 67%;
+    --brand-500: 239 56% 57%;
+    --brand-600: 243 75% 59%;
+    --brand-700: 249 95% 63%;
+    --brand-800: 256 92% 66%;
+    --brand-900: 263 85% 55%;
+    --brand-950: 269 91% 31%;
+
+    /* Neon colors for futuristic theme */
+    --neon-blue: 220 100% 60%;
+    --neon-purple: 280 100% 70%;
+    --neon-cyan: 180 100% 60%;
+    --neon-pink: 320 100% 70%;
+    --neon-green: 120 100% 60%;
+
+    /* Glow effects */
+    --glow-blue: 217 91% 60%;
+    --glow-purple: 269 91% 59%;
+    --glow-cyan: 189 94% 63%;
+    --glow-neon-blue: 220 100% 60%;
+    --glow-neon-purple: 280 100% 70%;
+  }
+
+  .dark {
+    --background: 0 0% 1%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    /* Brand colors for dark mode - Enhanced neon */
+    --brand-50: 269 91% 31%;
+    --brand-100: 263 85% 35%;
+    --brand-200: 256 92% 45%;
+    --brand-300: 249 95% 50%;
+    --brand-400: 243 75% 55%;
+    --brand-500: 239 56% 60%;
+    --brand-600: 237 56% 65%;
+    --brand-700: 236 68% 70%;
+    --brand-800: 236 84% 75%;
+    --brand-900: 237 100% 85%;
+    --brand-950: 240 100% 95%;
+
+    /* Enhanced neon colors for dark mode */
+    --neon-blue: 220 100% 70%;
+    --neon-purple: 280 100% 80%;
+    --neon-cyan: 180 100% 70%;
+    --neon-pink: 320 100% 80%;
+    --neon-green: 120 100% 70%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Futuristic neon glow effects */
+  .neon-glow-blue {
+    box-shadow:
+      0 0 20px hsl(var(--neon-blue) / 0.5),
+      0 0 40px hsl(var(--neon-blue) / 0.3),
+      0 0 60px hsl(var(--neon-blue) / 0.1);
+  }
+
+  .neon-glow-purple {
+    box-shadow:
+      0 0 20px hsl(var(--neon-purple) / 0.5),
+      0 0 40px hsl(var(--neon-purple) / 0.3),
+      0 0 60px hsl(var(--neon-purple) / 0.1);
+  }
+
+  .neon-glow-cyan {
+    box-shadow:
+      0 0 20px hsl(var(--neon-cyan) / 0.5),
+      0 0 40px hsl(var(--neon-cyan) / 0.3),
+      0 0 60px hsl(var(--neon-cyan) / 0.1);
+  }
+
+  /* Animated background particles */
+  .floating-particles::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+      radial-gradient(
+        circle at 20% 20%,
+        hsl(var(--neon-blue) / 0.1) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 80% 80%,
+        hsl(var(--neon-purple) / 0.1) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 40% 60%,
+        hsl(var(--neon-cyan) / 0.05) 0%,
+        transparent 50%
+      );
+    animation: float-particles 20s ease-in-out infinite;
+  }
+
+  /* 3D Transform utilities */
+  .transform-3d {
+    transform-style: preserve-3d;
+  }
+
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  /* Gradient text utilities */
+  .gradient-text-neon {
+    @apply bg-gradient-to-r from-blue-400 via-purple-500 to-cyan-400 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-neon-alt {
+    @apply bg-gradient-to-r from-purple-400 via-pink-500 to-blue-400 bg-clip-text text-transparent;
+  }
+}
+
+@keyframes float-particles {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.3;
+  }
+  33% {
+    transform: translateY(-30px) rotate(120deg);
+    opacity: 0.6;
+  }
+  66% {
+    transform: translateY(-15px) rotate(240deg);
+    opacity: 0.4;
+  }
+}
+
+@keyframes neon-pulse {
+  0%,
+  100% {
+    filter: brightness(1) saturate(1);
+    transform: scale(1);
+  }
+  50% {
+    filter: brightness(1.2) saturate(1.3);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes gradient-wave {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes hologram-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  2% {
+    opacity: 0.8;
+  }
+  4% {
+    opacity: 1;
+  }
+  6% {
+    opacity: 0.9;
+  }
+  8% {
+    opacity: 1;
+  }
+}
