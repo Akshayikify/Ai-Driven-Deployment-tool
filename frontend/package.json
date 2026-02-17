@@ -21,6 +21,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.60.1",
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.10.53",
     "dotenv": "^17.2.1",
