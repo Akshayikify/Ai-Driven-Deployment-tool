@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { Menu, X } from "lucide-react";
 
 export default function DashboardHeader() {
@@ -54,7 +53,7 @@ export default function DashboardHeader() {
 
           {/* Right Side Buttons */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <DarkModeToggle />
+
 
             {/* Mobile Menu Button */}
             <button

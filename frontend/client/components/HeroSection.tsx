@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { ArrowRight } from "lucide-react";
+import { useUser } from "@clerk/clerk-react";
 
 export default function HeroSection() {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { isSignedIn } = useUser();
   const isDark = theme === "dark";
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
@@ -77,7 +79,13 @@ export default function HeroSection() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
               <Button
                 size="lg"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => {
+                  if (isSignedIn) {
+                    navigate("/dashboard");
+                  } else {
+                    navigate("/signup");
+                  }
+                }}
                 className="text-lg px-8 py-6 bg-gradient-to-r from-[#caefd7]/30 via-[#f5bfd7]/30 to-[#abc9e9]/30 backdrop-blur-md border border-white/20 text-black hover:bg-white/50 hover:text-black shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
               >
                 Analyze
