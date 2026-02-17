@@ -6,7 +6,7 @@ export default function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <span className="text-xl font-bold">ZeroOps</span>
+              <span className="text-xl font-bold">Auto Deploy.AI</span>
             </div>
             <p className="text-gray-400 text-sm">
               Automate your deployments with AI-powered intelligence. Faster,
@@ -131,7 +131,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-          <p>&copy; 2025 AutoDeploy.AI. All rights reserved.</p>
+          <p>&copy; 2026 AutoDeploy.AI. All rights reserved.</p>
         </div>
       </div>
     </footer>

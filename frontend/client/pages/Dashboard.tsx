@@ -62,7 +62,7 @@ export default function Dashboard() {
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome to ZeroOps</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome to Auto Deploy.AI</h1>
               <p className="text-slate-400 text-sm sm:text-base">Deploy your applications with AI-powered automation</p>
             </div>
           </div>
@@ -70,42 +70,12 @@ export default function Dashboard() {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-          {/* Left Column - Main Content */}
+          {/* Main Content Area - Left Column */}
           <div className="xl:col-span-2 space-y-6">
-            {/* Deployment Stepper */}
-            <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Upload className="w-5 h-5 text-neon-cyan flex-shrink-0" />
-                <h2 className="text-lg sm:text-xl font-semibold text-white">Deployment Process</h2>
-              </div>
-              <DeploymentStepper currentStep={0} />
-            </Card>
+            {/* AI Agent - Expanded */}
+            <AIAgent className="h-[600px] w-full" />
 
-            {/* File Upload and Timeline Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* File Upload Section */}
-              <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Upload className="w-5 h-5 text-neon-cyan flex-shrink-0" />
-                  <h3 className="text-base sm:text-lg font-semibold text-white">Upload Your Code</h3>
-                </div>
-                <FileUploader
-                  onFileSelect={handleFileSelect}
-                  onContinue={handleContinue}
-                />
-              </Card>
-
-              {/* Deployment Timeline */}
-              <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
-                  <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Timeline</h3>
-                </div>
-                <ProgressTimeline steps={timelineSteps} />
-              </Card>
-            </div>
-
-            {/* Deployments Table - Full Width */}
+            {/* Deployments Table */}
             <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Server className="w-5 h-5 text-neon-cyan flex-shrink-0" />
@@ -117,11 +87,16 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Right Column - AI Agent */}
-          <div className="xl:col-span-1">
-            <div className="sticky top-6">
-              <AIAgent className="h-[calc(100vh-12rem)] min-h-[500px]" />
-            </div>
+          {/* Right Column */}
+          <div className="xl:col-span-1 space-y-6">
+            {/* Deployment Timeline */}
+            <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
+                <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Timeline</h3>
+              </div>
+              <ProgressTimeline steps={timelineSteps} />
+            </Card>
           </div>
         </div>
       </div>

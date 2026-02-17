@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
-import { Menu, X, LogOut } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Menu, X, LogOut, User } from "lucide-react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -9,27 +9,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useUser,
+  useClerk
+} from "@clerk/clerk-react";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
+  const { user, isSignedIn } = useUser();
+  const { signOut } = useClerk();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedUsername = localStorage.getItem("username");
-    setUsername(storedUsername);
-
-    const handleLogin = () => {
-      const updatedUsername = localStorage.getItem("username");
-      setUsername(updatedUsername);
-    };
-
-    window.addEventListener("login", handleLogin);
-
-    return () => {
-      window.removeEventListener("login", handleLogin);
-    };
-  }, []);
 
   const handleNavClick = (section: string) => {
     if (section === 'contact') {
@@ -55,11 +49,6 @@ export default function Header() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("username");
-    setUsername(null);
-  };
-
   return (
     <header className="fixed top-0 w-full z-50 bg-white/10 dark:bg-black/10 backdrop-blur-lg border border-white/20 dark:border-white/10 shadow-2xl transition-all duration-300">
       <div className="container mx-auto px-4 sm:px-6 py-4">
@@ -67,7 +56,7 @@ export default function Header() {
           {/* Logo */}
           <div className="flex items-center space-x-3">
             <span className="text-xl sm:text-2xl font-bold gradient-text-neon font-mono tracking-tight">
-              ZeroOps
+              Auto Deploy.AI
             </span>
           </div>
 
@@ -106,40 +95,28 @@ export default function Header() {
           {/* Right Side Buttons */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             <DarkModeToggle />
-            {username ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan font-medium text-sm"
-                  >
-                    Welcome, {username}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
+
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+
+            <SignedOut>
+              <div className="hidden sm:flex space-x-2">
                 <Button
                   variant="ghost"
-                  className="hidden sm:inline-flex text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan border border-transparent hover:border-neon-blue/30 dark:hover:border-neon-cyan/30 transition-all duration-300 rounded-xl text-sm"
-                  onClick={() => navigate("/login")}
+                  className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan border border-transparent hover:border-neon-blue/30 dark:hover:border-neon-cyan/30 transition-all duration-300 rounded-xl text-sm"
+                  asChild
                 >
-                  Login
+                  <Link to="/login">Login</Link>
                 </Button>
                 <Button
                   className="bg-neon-blue text-white hover:bg-neon-blue/90 border border-neon-blue hover:border-neon-blue/80 transition-all duration-300 rounded-xl text-sm px-3 sm:px-4 shadow-lg hover:shadow-xl"
-                  onClick={() => navigate("/signup")}
+                  asChild
                 >
-                  Signup
+                  <Link to="/signup">Signup</Link>
                 </Button>
-              </>
-            )}
+              </div>
+            </SignedOut>
 
             {/* Mobile Menu Button */}
             <button
@@ -181,27 +158,15 @@ export default function Header() {
                 Contact
               </button>
               <div className="pt-2 border-t border-gray-200/30 dark:border-neon-blue/20">
-                {username ? (
-                  <div className="flex flex-col space-y-2">
-                    <span className="w-full text-left text-gray-700 dark:text-gray-300 font-medium text-sm px-2 py-2">
-                      Welcome, {username}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      className="w-full text-left text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan border border-transparent hover:border-neon-blue/30 dark:hover:border-neon-cyan/30 transition-all duration-300 rounded-xl"
-                      onClick={() => {
-                        handleLogout();
-                        setIsMobileMenuOpen(false);
-                      }}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </Button>
+                <SignedIn>
+                  <div className="px-2 py-2">
+                    <UserButton afterSignOutUrl="/" showName />
                   </div>
-                ) : (
+                </SignedIn>
+                <SignedOut>
                   <Button
                     variant="ghost"
-                    className="w-full text-left text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan border border-transparent hover:border-neon-blue/30 dark:hover:border-neon-cyan/30 transition-all duration-300 rounded-xl"
+                    className="w-full text-left text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan border border-transparent hover:border-neon-blue/30 dark:hover:border-neon-cyan/30 transition-all duration-300 rounded-xl mb-2"
                     onClick={() => {
                       navigate("/login");
                       setIsMobileMenuOpen(false);
@@ -209,7 +174,16 @@ export default function Header() {
                   >
                     Login
                   </Button>
-                )}
+                  <Button
+                    className="w-full text-left bg-neon-blue text-white hover:bg-neon-blue/90 border border-neon-blue hover:border-neon-blue/80 transition-all duration-300 rounded-xl"
+                    onClick={() => {
+                      navigate("/signup");
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    Signup
+                  </Button>
+                </SignedOut>
               </div>
             </div>
           </div>

@@ -16,7 +16,7 @@ export default function DashboardHeader() {
           {/* Logo */}
           <div className="flex items-center space-x-3">
             <span className="text-xl sm:text-2xl font-bold gradient-text-neon font-mono tracking-tight">
-              ZeroOps
+              Auto Deploy.AI
             </span>
           </div>
 
