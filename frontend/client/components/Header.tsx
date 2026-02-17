@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { Menu, X, LogOut, User } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -94,7 +93,7 @@ export default function Header() {
 
           {/* Right Side Buttons */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <DarkModeToggle />
+
 
             <SignedIn>
               <UserButton afterSignOutUrl="/" />
