@@ -1,5 +1,6 @@
 import React from "react";
 import DashboardHeader from "@/components/DashboardHeader";
+import Footer from "@/components/Footer";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -32,6 +33,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto min-h-0">
         {children}
+        <Footer />
       </main>
     </div>
   );

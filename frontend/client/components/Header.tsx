@@ -54,9 +54,11 @@ export default function Header() {
         <nav className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-3">
-            <span className="text-xl sm:text-2xl font-bold gradient-text-neon font-mono tracking-tight">
-              Auto Deploy.AI
-            </span>
+            <Link to="/" className="flex items-center space-x-3">
+              <span className="text-xl sm:text-2xl font-bold gradient-text-neon font-mono tracking-tight">
+                Auto Deploy.AI
+              </span>
+            </Link>
           </div>
 
           {/* Desktop Navigation Links */}
