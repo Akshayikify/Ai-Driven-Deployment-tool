@@ -4,6 +4,7 @@ import DeploymentStepper from "@/components/DeploymentStepper";
 import FileUploader from "@/components/FileUploader";
 import DeploymentsTable from "@/components/DeploymentsTable";
 import ProgressTimeline from "@/components/ProgressTimeline";
+import LogMonitoringCard from "@/components/LogMonitoringCard";
 import AIAgent from "@/components/AIAgent";
 import { Card } from "@/components/ui/card";
 import { Activity, Upload, Clock, Server } from "lucide-react";
@@ -97,6 +98,9 @@ export default function Dashboard() {
               </div>
               <ProgressTimeline steps={timelineSteps} />
             </Card>
+
+            {/* Log Monitoring */}
+            <LogMonitoringCard />
           </div>
         </div>
       </div>
