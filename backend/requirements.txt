@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+gitpython
+docker
+kubernetes
+pyyaml
+pydantic-settings
+loguru
+motor
+dnspython
