@@ -1,10 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DeploymentStepper from "@/components/DeploymentStepper";
 import FileUploader from "@/components/FileUploader";
 import DeploymentsTable from "@/components/DeploymentsTable";
 import ProgressTimeline from "@/components/ProgressTimeline";
+<<<<<<< HEAD
 import LogMonitoringCard from "@/components/LogMonitoringCard";
+=======
+import LogMonitoringCard from "../components/LogMonitoringCard";
+>>>>>>> 1957f82 (Phase 1 of backend is completed)
 import AIAgent from "@/components/AIAgent";
 import { Card } from "@/components/ui/card";
 import { Activity, Upload, Clock, Server } from "lucide-react";
@@ -45,6 +49,22 @@ const timelineSteps = [
 ];
 
 export default function Dashboard() {
+  const [backendStatus, setBackendStatus] = useState<{ status: string, database: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/health")
+      .then((res) => res.json())
+      .then((data) => {
+        setBackendStatus(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Backend health check failed:", err);
+        setLoading(false);
+      });
+  }, []);
+
   const handleFileSelect = (files: FileList) => {
     console.log("Files selected:", files);
   };
@@ -64,7 +84,13 @@ export default function Dashboard() {
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-xl sm:text-2xl font-bold text-white">Welcome to Auto Deploy.AI</h1>
-              <p className="text-slate-400 text-sm sm:text-base">Deploy your applications with AI-powered automation</p>
+              <p className="text-slate-400 text-sm sm:text-base mb-2">Deploy your applications with AI-powered automation</p>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${loading ? 'bg-yellow-500 animate-pulse' : backendStatus ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-xs font-mono text-slate-300">
+                  Backend: {loading ? "Connecting..." : backendStatus ? `ONLINE (DB: ${backendStatus.database})` : "OFFLINE"}
+                </span>
+              </div>
             </div>
           </div>
         </Card>
