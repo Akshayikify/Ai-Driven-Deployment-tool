@@ -9,44 +9,12 @@ import AIAgent from "@/components/AIAgent";
 import { Card } from "@/components/ui/card";
 import { Activity, Upload, Clock, Server } from "lucide-react";
 
-const timelineSteps = [
-  {
-    id: "upload",
-    title: "Code Uploaded",
-    description: "Project files successfully uploaded to the platform",
-    status: "completed" as const,
-    timestamp: "2 minutes ago",
-  },
-  {
-    id: "analyze",
-    title: "AI Analysis",
-    description: "Analyzing project structure and dependencies",
-    status: "active" as const,
-    timestamp: "1 minute ago",
-  },
-  {
-    id: "build",
-    title: "Build Process",
-    description: "Building application for deployment",
-    status: "pending" as const,
-  },
-  {
-    id: "deploy",
-    title: "Deployment",
-    description: "Deploying to production environment",
-    status: "pending" as const,
-  },
-  {
-    id: "monitor",
-    title: "Monitoring",
-    description: "Setting up monitoring and alerts",
-    status: "pending" as const,
-  },
-];
+import { useDeployment } from "@/context/DeploymentContext";
 
 export default function Dashboard() {
   const [backendStatus, setBackendStatus] = useState<{ status: string, database: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const { steps } = useDeployment();
 
   useEffect(() => {
     fetch("http://localhost:8000/health")
@@ -118,7 +86,7 @@ export default function Dashboard() {
                 <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
                 <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Timeline</h3>
               </div>
-              <ProgressTimeline steps={timelineSteps} />
+              <ProgressTimeline steps={steps} />
             </Card>
 
             {/* Log Monitoring */}

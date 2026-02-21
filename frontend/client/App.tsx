@@ -11,19 +11,23 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 
+import { DeploymentProvider } from "@/context/DeploymentContext";
+
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/features" element={<Features />} />
-        <Route path="/workflow" element={<Workflow />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <DeploymentProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/workflow" element={<Workflow />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </DeploymentProvider>
   </ThemeProvider>
 );
 
