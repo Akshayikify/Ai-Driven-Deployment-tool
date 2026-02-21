@@ -48,6 +48,39 @@ export default function AIAgent({ className }: AIAgentProps) {
     scrollToBottom();
   }, [messages]);
 
+  const handleRepositoryAnalysis = async (url: string, token?: string) => {
+    try {
+      setIsTyping(true);
+      setCurrentTask("Cloning repository...");
+
+      const response = await fetch("http://localhost:8000/api/v1/analyze/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repo_url: url,
+          branch: "main",
+          github_token: token || null
+        }),
+      });
+
+      const data = await response.json();
+
+      const agentResponse: Message = {
+        id: Date.now().toString(),
+        type: 'agent',
+        content: `I've detected a GitHub repository! I'm starting an automated analysis now.\n\n**Task ID:** \`${data.task_id}\`\n**Status:** Queued\n\n${token ? "✅ **Authentication:** Provided (I will attempt to push changes back)." : "ℹ️ **Note:** No token provided. I will only perform local analysis."}\n\nYou can monitor the progress in the Deployment Logs card.`,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, agentResponse]);
+    } catch (error) {
+      console.error("Analysis failed:", error);
+    } finally {
+      setIsTyping(false);
+      setCurrentTask("Ready to assist with your deployment...");
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
@@ -60,6 +93,22 @@ export default function AIAgent({ className }: AIAgentProps) {
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
+
+    // Check for GitHub URL
+    const githubRegex = /https:\/\/github\.com\/[\w.-]+\/[\w.-]+/;
+    const match = inputValue.match(githubRegex);
+
+    if (match) {
+      const url = match[0];
+      // Try to find a token after the URL (either ghp_... or a long hex-like string)
+      const restOfInput = inputValue.substring(match.index! + url.length).trim();
+      const tokenMatch = restOfInput.match(/^(ghp_[\w]+|[\w]{30,40})/);
+      const token = tokenMatch ? tokenMatch[0] : undefined;
+
+      await handleRepositoryAnalysis(url, token);
+      return;
+    }
+
     setIsTyping(true);
     setCurrentTask("Processing your request...");
 
