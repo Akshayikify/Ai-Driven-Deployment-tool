@@ -38,7 +38,7 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, github_tok
         repo_service.push_changes(workspace)
 
     # 5. Cleanup
-    # repo_service.cleanup_workspace(workspace)
+    repo_service.cleanup_workspace(workspace)
     
     logger.info(f"Task {task_id}: Analysis and generation complete.")
 

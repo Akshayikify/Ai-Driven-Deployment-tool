@@ -12,20 +12,36 @@ class RepositoryService:
             os.makedirs(self.base_temp_dir)
             logger.info(f"Created base temporary directory: {self.base_temp_dir}")
 
-    def _rmtree(self, path: str):
+    def _rmtree(self, path: str, retries: int = 5):
         """
         Internal helper to handle read-only files on Windows during deletion.
         """
+        import time
+        import gc
         def on_rm_error(func, path, exc_info):
             os.chmod(path, stat.S_IWRITE)
-            func(path)
+            try:
+                func(path)
+            except Exception as e:
+                logger.debug(f"on_rm_error failed for {path}: {e}")
 
         if os.path.exists(path):
-            try:
-                # onerror is for compatibility, onexc is 3.12+
-                shutil.rmtree(path, onerror=on_rm_error)
-            except Exception as e:
-                logger.error(f"Failed to delete {path}: {e}")
+            # Force garbage collection to release any dangling file handles
+            gc.collect()
+            
+            for i in range(retries):
+                try:
+                    # onerror is for compatibility, onexc is 3.12+
+                    shutil.rmtree(path, onerror=on_rm_error)
+                    return
+                except Exception as e:
+                    if i < retries - 1:
+                        # On Windows, sometimes handles are released slowly
+                        logger.warning(f"Retry {i+1} deleting {path} due to error: {e}")
+                        time.sleep(0.5 * (i + 1)) # Increasing backoff
+                        gc.collect()
+                    else:
+                        logger.error(f"Failed to delete {path} after {retries} attempts: {e}")
 
     def clone_repository(self, repo_url: str, branch: str = "main", token: Optional[str] = None) -> Optional[str]:
         """
@@ -48,7 +64,8 @@ class RepositoryService:
             else:
                 logger.info(f"Cloning {repo_url} (branch: {branch}) into {target_dir}...")
 
-            Repo.clone_from(clone_url, target_dir, branch=branch)
+            repo = Repo.clone_from(clone_url, target_dir, branch=branch)
+            repo.close()  # Close the handle immediately after cloning
             logger.info(f"Successfully cloned {repo_url}")
             return target_dir
         except Exception as e:
@@ -59,6 +76,7 @@ class RepositoryService:
         """
         Commits and pushes changes in the workspace back to the remote.
         """
+        repo = None
         try:
             repo = Repo(workspace_path)
             # Add all new/modified files
@@ -78,6 +96,9 @@ class RepositoryService:
         except Exception as e:
             logger.error(f"Failed to push changes: {e}")
             return False
+        finally:
+            if repo:
+                repo.close()
 
     def cleanup_workspace(self, workspace_path: str):
         """
