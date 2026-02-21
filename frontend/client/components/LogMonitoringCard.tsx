@@ -11,49 +11,42 @@ interface LogEntry {
 }
 
 export default function LogMonitoringCard() {
-    const [logs, setLogs] = useState<LogEntry[]>([
-        {
-            id: "1",
-            timestamp: new Date().toLocaleTimeString(),
-            level: "info",
-            message: "Initializing deployment sequence...",
-        },
-        {
-            id: "2",
-            timestamp: new Date().toLocaleTimeString(),
-            level: "success",
-            message: "Build environment ready.",
-        },
-        {
-            id: "3",
-            timestamp: new Date().toLocaleTimeString(),
-            level: "info",
-            message: "Fetching dependencies from package.json",
-        },
-    ]);
+    const [logs, setLogs] = useState<LogEntry[]>([]);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Auto-scroll to bottom of logs
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [logs]);
 
-    // Simulate incoming logs for demonstration
     useEffect(() => {
-        const timer = setInterval(() => {
-            const newLog: LogEntry = {
-                id: Math.random().toString(36).substr(2, 9),
-                timestamp: new Date().toLocaleTimeString(),
-                level: Math.random() > 0.8 ? "warning" : "info",
-                message: `Deployment progress: ${Math.floor(Math.random() * 100)}% complete...`,
-            };
-            setLogs((prev) => [...prev.slice(-49), newLog]);
-        }, 5000);
+        const eventSource = new EventSource("http://localhost:8000/api/v1/logs/stream");
 
-        return () => clearInterval(timer);
+        eventSource.onmessage = (event) => {
+            const logText = event.data;
+            // Parse: 09:40:15 | INFO | message
+            const parts = logText.split(" | ");
+            if (parts.length >= 3) {
+                const newLog: LogEntry = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    timestamp: parts[0],
+                    level: parts[1].toLowerCase() as any,
+                    message: parts.slice(2).join(" | "),
+                };
+                setLogs((prev) => [...prev.slice(-99), newLog]);
+            }
+        };
+
+        eventSource.onerror = (error) => {
+            console.error("EventSource failed:", error);
+            eventSource.close();
+        };
+
+        return () => {
+            eventSource.close();
+        };
     }, []);
 
     return (

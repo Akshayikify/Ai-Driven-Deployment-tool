@@ -1,9 +1,11 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import tasks
+from app.api.v1.endpoints import tasks, analyze, logs
 
 api_router = APIRouter()
 
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
+api_router.include_router(logs.router, prefix="/logs", tags=["logs"])
 
 @api_router.get("/health")
 async def health_check():

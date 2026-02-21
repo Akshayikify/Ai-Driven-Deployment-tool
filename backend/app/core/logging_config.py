@@ -25,11 +25,24 @@ def setup_logging():
     logging.getLogger("uvicorn.error").handlers = [InterceptHandler()]
 
     # Configure Loguru
+    from app.services.log_streamer import log_streamer
+    
+    def log_streamer_sink(message):
+        record = message.record
+        time_str = record["time"].strftime("%H:%M:%S")
+        level_str = record["level"].name
+        msg_str = record["message"]
+        log_streamer.push_log(f"{time_str} | {level_str} | {msg_str}")
+
     logger.configure(
         handlers=[
             {
                 "sink": sys.stdout,
                 "format": "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+            },
+            {
+                "sink": log_streamer_sink,
+                "format": "{time:HH:mm:ss} | {level} | {message}",
             }
         ]
     )
