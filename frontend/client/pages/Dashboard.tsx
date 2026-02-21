@@ -4,11 +4,7 @@ import DeploymentStepper from "@/components/DeploymentStepper";
 import FileUploader from "@/components/FileUploader";
 import DeploymentsTable from "@/components/DeploymentsTable";
 import ProgressTimeline from "@/components/ProgressTimeline";
-<<<<<<< HEAD
 import LogMonitoringCard from "@/components/LogMonitoringCard";
-=======
-import LogMonitoringCard from "../components/LogMonitoringCard";
->>>>>>> 1957f82 (Phase 1 of backend is completed)
 import AIAgent from "@/components/AIAgent";
 import { Card } from "@/components/ui/card";
 import { Activity, Upload, Clock, Server } from "lucide-react";
