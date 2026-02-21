@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useDeployment } from "@/context/DeploymentContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,21 +19,21 @@ interface Message {
 }
 
 export default function AIAgent({ className }: AIAgentProps) {
-  const [isActive, setIsActive] = useState(true);
-  const [currentTask, setCurrentTask] = useState(
-    "Ready to assist with your deployment...",
-  );
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      type: 'agent',
-      content: "Hello! I'm your AI deployment assistant. How can I help you today?",
-      timestamp: new Date()
-    }
+      id: "1",
+      type: "agent",
+      content: "Hello! I'm your AI Deployment Assistant. Paste a GitHub repository link or ask me anything about your deployment process!",
+      timestamp: new Date(),
+    },
   ]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [currentTask, setCurrentTask] = useState("Ready to assist with your deployment...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { setActiveTaskId } = useDeployment();
 
   const agentCapabilities = [
     { icon: Brain, label: "Code Analysis", status: "active" },
@@ -65,10 +66,15 @@ export default function AIAgent({ className }: AIAgentProps) {
 
       const data = await response.json();
 
+      // Update the global active task ID to trigger timeline updates
+      if (data.task_id) {
+        setActiveTaskId(data.task_id);
+      }
+
       const agentResponse: Message = {
         id: Date.now().toString(),
         type: 'agent',
-        content: `I've detected a GitHub repository! I'm starting an automated analysis now.\n\n**Task ID:** \`${data.task_id}\`\n**Status:** Queued\n\n${token ? "✅ **Authentication:** Provided (I will attempt to push changes back)." : "ℹ️ **Note:** No token provided. I will only perform local analysis."}\n\nYou can monitor the progress in the Deployment Logs card.`,
+        content: `I've detected a GitHub repository! I'm starting an automated analysis now.\n\n**Task ID:** \`${data.task_id}\`\n**Status:** Queued\n\n${token ? "✅ **Authentication:** Provided (I will attempt to push changes back)." : "ℹ️ **Note:** No token provided. I will only perform local analysis."}\n\nYou can monitor the progress in the Deployment Logs and Timeline cards.`,
         timestamp: new Date()
       };
 

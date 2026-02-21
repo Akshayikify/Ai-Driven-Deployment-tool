@@ -7,6 +7,8 @@ from app.services.generator import file_generator
 from loguru import logger
 import uuid
 
+from app.services.task_manager import task_manager
+
 router = APIRouter()
 
 class AnalyzeRequest(BaseModel):
@@ -19,33 +21,42 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, github_tok
     Background task to clone, analyze, and generate files for a repo.
     """
     logger.info(f"Starting analysis task {task_id} for {repo_url}")
+    task_manager.update_task(task_id, "cloning")
     
     # 1. Clone
     workspace = repo_service.clone_repository(repo_url, branch, token=github_token)
     if not workspace:
         logger.error(f"Task {task_id}: Cloning failed.")
+        task_manager.update_task(task_id, "failed", message="Cloning failed.")
         return
 
     # 2. Analyze
+    task_manager.update_task(task_id, "analyzing")
     findings = analysis_engine.analyze_directory(workspace)
     
     # 3. Generate Dockerfile
+    task_manager.update_task(task_id, "generating")
     file_generator.generate_dockerfile(workspace, findings)
 
     # 4. Push changes if token provided
     if github_token:
+        task_manager.update_task(task_id, "pushing")
         logger.info(f"Task {task_id}: Attempting to push changes...")
         repo_service.push_changes(workspace)
 
     # 5. Cleanup
     repo_service.cleanup_workspace(workspace)
     
+    task_manager.update_task(task_id, "completed")
     logger.info(f"Task {task_id}: Analysis and generation complete.")
 
 @router.post("/analyze")
 async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTasks):
     task_id = str(uuid.uuid4())
     logger.info(f"Received analysis request for {request.repo_url}. Assigned ID: {task_id}")
+    
+    # Initialize task status
+    task_manager.update_task(task_id, "initialized")
     
     background_tasks.add_task(analyze_repo_task, task_id, request.repo_url, request.branch, request.github_token)
     
@@ -54,3 +65,10 @@ async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTa
         "task_id": task_id,
         "message": f"Analysis for {request.repo_url} has been started in the background."
     }
+
+@router.get("/status/{task_id}")
+async def get_task_status(task_id: str):
+    status = task_manager.get_task(task_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return status
