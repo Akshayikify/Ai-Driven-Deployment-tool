@@ -9,6 +9,8 @@ import uuid
 
 from app.services.task_manager import task_manager
 
+from app.services.ai_service import ai_service
+
 router = APIRouter()
 
 class AnalyzeRequest(BaseModel):
@@ -34,9 +36,14 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, github_tok
     task_manager.update_task(task_id, "analyzing")
     findings = analysis_engine.analyze_directory(workspace)
     
-    # 3. Generate Dockerfile
+    # AI Refinement if confidence is low
+    if findings.get("confidence", 0) < 0.7:
+        logger.info(f"Task {task_id}: Low confidence ({findings.get('confidence')}). Requesting AI refinement...")
+        findings = await ai_service.refine_analysis(findings)
+    
+    # 3. Generate Deployment Files
     task_manager.update_task(task_id, "generating")
-    file_generator.generate_dockerfile(workspace, findings)
+    file_generator.generate_deployment_files(workspace, findings)
 
     # 4. Push changes if token provided
     if github_token:
