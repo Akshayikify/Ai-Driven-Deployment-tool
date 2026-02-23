@@ -51,6 +51,10 @@ class AnalysisEngine:
         self._detect_node(findings, workspace_path)
         self._detect_python(findings, workspace_path)
         self._detect_go(findings, workspace_path)
+        self._detect_php(findings, workspace_path)
+        self._detect_ruby(findings, workspace_path)
+        self._detect_swift(findings, workspace_path)
+        self._detect_html(findings, workspace_path)
         
         # 3. Detect Architecture
         if "package.json" in file_index["by_name"] and ("requirements.txt" in file_index["by_name"] or "pyproject.toml" in file_index["by_name"]):
@@ -154,7 +158,58 @@ class AnalysisEngine:
                 findings["entry_point"] = file_index["by_name"]["main.go"][0]
                 findings["confidence"] += 0.2
 
-        logger.info(f"Analysis complete: {findings['language']} / {findings['framework']}")
+    def _detect_php(self, findings: dict, workspace_path: str):
+        file_index = findings["file_index"]
+        if "composer.json" in file_index["by_name"] or ".php" in file_index["by_extension"]:
+            findings["language"] = "PHP"
+            findings["confidence"] = max(findings["confidence"], 0.6)
+            
+            if "composer.json" in file_index["by_name"]:
+                findings["detected_files"].append("composer.json")
+                findings["framework"] = "PHP (Composer)"
+            
+            php_entries = ["index.php", "server.php", "app.php"]
+            for entry in php_entries:
+                if entry in file_index["by_name"]:
+                    findings["entry_point"] = file_index["by_name"][entry][0]
+                    findings["confidence"] += 0.2
+                    break
+
+    def _detect_ruby(self, findings: dict, workspace_path: str):
+        file_index = findings["file_index"]
+        if "Gemfile" in file_index["by_name"] or ".rb" in file_index["by_extension"]:
+            findings["language"] = "Ruby"
+            findings["confidence"] = max(findings["confidence"], 0.6)
+            
+            if "Gemfile" in file_index["by_name"]:
+                findings["detected_files"].append("Gemfile")
+                findings["framework"] = "Ruby (Bundler)"
+            
+            if "config.ru" in file_index["by_name"]:
+                findings["entry_point"] = "config.ru"
+
+    def _detect_swift(self, findings: dict, workspace_path: str):
+        file_index = findings["file_index"]
+        if "Package.swift" in file_index["by_name"] or ".swift" in file_index["by_extension"]:
+            findings["language"] = "Swift"
+            findings["confidence"] = max(findings["confidence"], 0.6)
+            
+            if "Package.swift" in file_index["by_name"]:
+                findings["detected_files"].append("Package.swift")
+                findings["framework"] = "Swift (Server-side)"
+
+    def _detect_html(self, findings: dict, workspace_path: str):
+        file_index = findings["file_index"]
+        # Only detect as HTML if no other major language was found
+        if findings["language"] == "Unknown" and ".html" in file_index["by_extension"]:
+            findings["language"] = "HTML/Static"
+            findings["framework"] = "Static Website"
+            findings["confidence"] = 0.5
+            
+            if "index.html" in file_index["by_name"]:
+                findings["entry_point"] = file_index["by_name"]["index.html"][0]
+                findings["confidence"] += 0.2
+
         return findings
 
 analysis_engine = AnalysisEngine()

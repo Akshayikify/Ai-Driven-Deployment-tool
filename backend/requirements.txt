@@ -10,3 +10,4 @@ motor
 dnspython
 sse-starlette==2.2.1
 google-generativeai==0.8.3
+openai
