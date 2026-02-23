@@ -17,7 +17,7 @@ export default function Dashboard() {
   const { steps } = useDeployment();
 
   useEffect(() => {
-    fetch("http://localhost:8000/health")
+    fetch("http://127.0.0.1:8000/health")
       .then((res) => res.json())
       .then((data) => {
         setBackendStatus(data);

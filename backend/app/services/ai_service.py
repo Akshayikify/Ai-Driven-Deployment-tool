@@ -9,7 +9,7 @@ class AIService:
         self.api_key = settings.GOOGLE_API_KEY
         if self.api_key:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.model = genai.GenerativeModel('gemini-2.0-flash')
         else:
             self.model = None
             logger.warning("GOOGLE_API_KEY (settings) not found. AIService will be disabled.")
