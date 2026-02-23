@@ -22,7 +22,7 @@ export default function LogMonitoringCard() {
     }, [logs]);
 
     useEffect(() => {
-        const eventSource = new EventSource("http://localhost:8000/api/v1/logs/stream");
+        const eventSource = new EventSource("http://127.0.0.1:8000/api/v1/logs/stream");
 
         eventSource.onmessage = (event) => {
             const logText = event.data;
