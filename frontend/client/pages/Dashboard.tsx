@@ -66,7 +66,22 @@ export default function Dashboard() {
             {/* AI Agent - Expanded */}
             <AIAgent className="h-[600px] w-full" />
 
-            {/* Deployments Table */}
+            {/* Log Monitoring - Moved and Enlarged */}
+            <LogMonitoringCard className="h-[600px]" />
+
+            {/* Deployment Timeline - Moved below logs */}
+            <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
+                <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Status</h3>
+              </div>
+              <ProgressTimeline steps={steps} />
+            </Card>
+          </div>
+
+          {/* Right Column */}
+          <div className="xl:col-span-1 space-y-6">
+            {/* Deployments Table - Moved to right for better balance or keep at bottom */}
             <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Server className="w-5 h-5 text-neon-cyan flex-shrink-0" />
@@ -76,21 +91,6 @@ export default function Dashboard() {
                 <DeploymentsTable />
               </div>
             </Card>
-          </div>
-
-          {/* Right Column */}
-          <div className="xl:col-span-1 space-y-6">
-            {/* Deployment Timeline */}
-            <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
-                <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Timeline</h3>
-              </div>
-              <ProgressTimeline steps={steps} />
-            </Card>
-
-            {/* Log Monitoring */}
-            <LogMonitoringCard />
           </div>
         </div>
       </div>
