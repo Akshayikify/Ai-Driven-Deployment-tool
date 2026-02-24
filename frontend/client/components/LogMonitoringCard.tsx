@@ -10,7 +10,7 @@ interface LogEntry {
     message: string;
 }
 
-export default function LogMonitoringCard() {
+export default function LogMonitoringCard({ className }: { className?: string }) {
     const [logs, setLogs] = useState<LogEntry[]>([]);
 
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -50,7 +50,7 @@ export default function LogMonitoringCard() {
     }, []);
 
     return (
-        <Card className="bg-slate-900 border-slate-700 flex flex-col h-[400px] overflow-hidden shadow-2xl">
+        <Card className={cn("bg-slate-900 border-slate-700 flex flex-col overflow-hidden shadow-2xl", className)}>
             {/* Terminal Header */}
             <div className="bg-slate-800/80 border-b border-slate-700 px-4 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
