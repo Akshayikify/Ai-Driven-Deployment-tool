@@ -59,39 +59,38 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-          {/* Main Content Area - Left Column */}
-          <div className="xl:col-span-2 space-y-6">
-            {/* AI Agent - Expanded */}
-            <AIAgent className="h-[600px] w-full" />
+        {/* Main Content Area */}
+        <div className="space-y-6">
+          {/* 1. AI Agent - Full Width */}
+          <AIAgent className="h-[600px] w-full" />
 
-            {/* Log Monitoring - Moved and Enlarged */}
-            <LogMonitoringCard className="h-[600px]" />
+          {/* 2. Logs and Status - 75/25 Split */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Log Monitoring - 75% */}
+            <LogMonitoringCard className="lg:col-span-3 h-[500px]" />
 
-            {/* Deployment Timeline - Moved below logs */}
-            <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
+            {/* Deployment Status - 25% */}
+            <Card className="lg:col-span-1 bg-slate-800/50 border-slate-700 p-4 sm:p-6 flex flex-col h-[500px]">
               <div className="flex items-center gap-3 mb-4">
                 <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
                 <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Status</h3>
               </div>
-              <ProgressTimeline steps={steps} />
+              <div className="flex-1 overflow-y-auto">
+                <ProgressTimeline steps={steps} />
+              </div>
             </Card>
           </div>
 
-          {/* Right Column */}
-          <div className="xl:col-span-1 space-y-6">
-            {/* Deployments Table - Moved to right for better balance or keep at bottom */}
-            <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Server className="w-5 h-5 text-neon-cyan flex-shrink-0" />
-                <h3 className="text-base sm:text-lg font-semibold text-white">Recent Deployments</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <DeploymentsTable />
-              </div>
-            </Card>
-          </div>
+          {/* 3. Recent Deployments - Full Width */}
+          <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Server className="w-5 h-5 text-neon-cyan flex-shrink-0" />
+              <h3 className="text-base sm:text-lg font-semibold text-white">Recent Deployments</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <DeploymentsTable />
+            </div>
+          </Card>
         </div>
       </div>
     </DashboardLayout>
