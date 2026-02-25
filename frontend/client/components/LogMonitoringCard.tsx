@@ -103,7 +103,11 @@ export default function LogMonitoringCard({ className }: { className?: string })
             <div className="px-4 py-2 bg-slate-800/40 border-t border-slate-700/50 flex items-center justify-between">
                 <span className="text-[10px] text-slate-500 font-mono">Process-ID: 8842</span>
                 <div className="flex gap-3">
-                    <button className="text-slate-500 hover:text-white transition-colors">
+                    <button
+                        onClick={() => setLogs([])}
+                        className="text-slate-500 hover:text-white transition-colors active:rotate-180 duration-500"
+                        title="Clear Logs"
+                    >
                         <RefreshCw className="w-3 h-3" />
                     </button>
                     <button className="text-slate-500 hover:text-white transition-colors">
