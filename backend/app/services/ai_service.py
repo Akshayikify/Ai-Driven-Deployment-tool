@@ -46,4 +46,22 @@ class AIService:
         logger.warning("All AI providers failed to refine analysis.")
         return findings
 
+    async def chat_with_agent(self, message: str) -> str:
+        """
+        Orchestrates generic chat queries across available providers.
+        """
+        if not self.providers:
+            return "I'm currently running in offline mode without an API key, so I can only perform basic static analysis and generic replies."
+
+        for provider in self.providers:
+            try:
+                response = await provider.chat(message)
+                if response:
+                    return response
+            except Exception as e:
+                logger.error(f"Provider {provider.__class__.__name__} failed during chat: {e}")
+                continue
+                
+        return "I'm sorry, I'm having trouble connecting to my AI backend right now. Please try again later."
+
 ai_service = AIService()

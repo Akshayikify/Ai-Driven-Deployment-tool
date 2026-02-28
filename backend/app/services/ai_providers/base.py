@@ -7,6 +7,11 @@ class AIProvider(ABC):
         """Refines the analysis using the specific AI provider."""
         pass
 
+    @abstractmethod
+    async def chat(self, message: str) -> Optional[str]:
+        """Generates a conversational response based on the user's message."""
+        pass
+
     def _get_prompt(self, findings: Dict[str, Any]) -> str:
         file_list = findings.get("file_index", {}).get("all_files", [])[:100]
         return f"""
