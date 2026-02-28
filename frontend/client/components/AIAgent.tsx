@@ -88,7 +88,7 @@ export default function AIAgent({ className }: AIAgentProps) {
       const agentResponse: Message = {
         id: Date.now().toString(),
         type: 'agent',
-        content: `I've detected a GitHub repository! I'm starting an automated analysis now.\n\n**Task ID:** \`${data.task_id}\`\n**Status:** Queued\n\n${token ? "✅ **Authentication:** Provided (I will attempt to push changes back)." : "ℹ️ **Note:** No token provided. I will only perform local analysis."}\n\nYou can monitor the progress in the Deployment Logs and Timeline cards.`,
+        content: `### Repository Analysis Initiated\n\nI've detected a GitHub repository and started the automated analysis process.\n\n**Task Details:**\n- **ID:** \`${data.task_id}\`\n- **Status:** ⏳ Queued\n\n**Authentication:**\n${token ? "-  **Token Provided:** I will attempt to push changes back to the repository." : "- ℹ️ **No Token:** I will only perform a local environment analysis."}\n\n---\n*You can monitor the progress in real-time using the **Deployment Logs** and **Timeline** cards below.*`,
         timestamp: new Date()
       };
 
@@ -186,7 +186,7 @@ export default function AIAgent({ className }: AIAgentProps) {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">AI Assistant</h3>
-              <p className="text-xs text-slate-400">Spark Intelligence</p>
+              <p className="text-xs text-slate-400">Auto Deploy Intelligence</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
