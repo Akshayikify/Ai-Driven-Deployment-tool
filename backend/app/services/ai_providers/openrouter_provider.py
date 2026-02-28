@@ -39,3 +39,24 @@ class OpenRouterProvider(AIProvider):
         except Exception as e:
             logger.error(f"OpenRouter refinement failed: {e}")
             return None
+
+    async def chat(self, message: str) -> Optional[str]:
+        if not self.client:
+            return None
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a helpful AI Deployment Assistant. Answer user queries about web deployment, code analysis, and DevOps correctly and concisely."},
+                    {"role": "user", "content": message}
+                ],
+                extra_headers={
+                    "HTTP-Referer": "https://github.com/Akshayikify/Auto_Deployment_tool",
+                    "X-Title": "Auto Deploy AI",
+                }
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"OpenRouter chat failed: {e}")
+            return None

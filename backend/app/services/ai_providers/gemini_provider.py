@@ -25,3 +25,15 @@ class GeminiProvider(AIProvider):
         except Exception as e:
             logger.error(f"Gemini refinement failed: {e}")
             return None
+
+    async def chat(self, message: str) -> Optional[str]:
+        if not self.model:
+            return None
+
+        try:
+            prompt = f"You are a helpful AI Deployment Assistant. Answer the following user query directly and concisely.\n\nUser: {message}\nAssistant:"
+            response = self.model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            logger.error(f"Gemini chat failed: {e}")
+            return None

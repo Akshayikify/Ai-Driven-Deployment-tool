@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, MessageCircle, Zap, Brain, Sparkles, Send, User } from "lucide-react";
+import { Bot, MessageCircle, Zap, Brain, Sparkles, Send, User, RefreshCw } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
 import { cn } from "@/lib/utils";
 
 interface AIAgentProps {
@@ -41,8 +42,21 @@ export default function AIAgent({ className }: AIAgentProps) {
     { icon: Sparkles, label: "AI Insights", status: "ready" },
   ];
 
+  const clearChat = () => {
+    setMessages([
+      {
+        id: Date.now().toString(),
+        type: "agent",
+        content: "Hello! I'm your AI Deployment Assistant. Paste a GitHub repository link or ask me anything about your deployment process!",
+        timestamp: new Date(),
+      },
+    ]);
+    setInputValue("");
+    setCurrentTask("Ready to assist with your deployment...");
+  };
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
   useEffect(() => {
@@ -116,29 +130,42 @@ export default function AIAgent({ className }: AIAgentProps) {
     }
 
     setIsTyping(true);
-    setCurrentTask("Processing your request...");
+    setCurrentTask("Thinking...");
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        "I understand your request. Let me analyze that for you.",
-        "Great question! Here's what I found...",
-        "I've processed your input. Here's my recommendation:",
-        "Based on your deployment needs, I suggest...",
-        "Let me help you optimize that configuration."
-      ];
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/v1/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: inputValue }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Chat request failed");
+      }
+
+      const data = await response.json();
 
       const agentResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: 'agent',
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: data.response,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, agentResponse]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'agent',
+        content: "I'm sorry, I'm having trouble connecting to my brain right now. Please try again later.",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
       setCurrentTask("Ready to assist with your deployment...");
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -162,17 +189,28 @@ export default function AIAgent({ className }: AIAgentProps) {
               <p className="text-xs text-slate-400">Spark Intelligence</p>
             </div>
           </div>
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-xs border",
-              isActive
-                ? "border-green-500/30 text-green-400 bg-green-500/10"
-                : "border-slate-600 text-slate-400 bg-slate-700/50",
-            )}
-          >
-            {isActive ? "Active" : "Standby"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-xs border",
+                isActive
+                  ? "border-green-500/30 text-green-400 bg-green-500/10"
+                  : "border-slate-600 text-slate-400 bg-slate-700/50",
+              )}
+            >
+              {isActive ? "Active" : "Standby"}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearChat}
+              className="w-8 h-8 text-slate-400 hover:text-white hover:bg-slate-700/50"
+              title="Start New Chat"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -199,7 +237,15 @@ export default function AIAgent({ className }: AIAgentProps) {
                   : "bg-slate-700/50 text-slate-300 border border-slate-600/50"
               )}
             >
-              {message.content}
+              {message.type === 'agent' ? (
+                <div className="prose prose-sm prose-invert max-w-none">
+                  <ReactMarkdown>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <span className="whitespace-pre-wrap">{message.content}</span>
+              )}
             </div>
             {message.type === 'user' && (
               <div className="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0">
