@@ -1,9 +1,12 @@
 from loguru import logger
 import os
 from typing import Dict, Any, Optional
+import inspect
+
 from .docker_templates.python_template import PythonDockerTemplate
 from .docker_templates.node_template import NodeDockerTemplate
 from .docker_templates.php_template import PHPDockerTemplate
+from .docker_templates.llm_template import LLMDockerTemplate
 
 class FileGenerator:
     def __init__(self):
@@ -13,14 +16,14 @@ class FileGenerator:
             "PHP": PHPDockerTemplate()
         }
 
-    def generate_deployment_files(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
+    async def generate_deployment_files(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
         """
         Generates all necessary deployment files (Dockerfile, .dockerignore) based on analysis findings.
         """
         success = True
         
         # 1. Generate Dockerfile
-        df_success = self.generate_dockerfile(workspace_path, findings)
+        df_success = await self.generate_dockerfile(workspace_path, findings)
         
         # 2. Generate .dockerignore
         di_success = self.generate_dockerignore(workspace_path, findings)
@@ -33,7 +36,7 @@ class FileGenerator:
         
         return df_success and di_success and ci_success
 
-    def generate_dockerfile(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
+    async def generate_dockerfile(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
         """
         Generates a recommended Dockerfile using the appropriate template strategy.
         """
@@ -47,10 +50,13 @@ class FileGenerator:
         strategy = self.strategies.get(lang)
 
         if not strategy:
-            logger.warning(f"No Docker template found for language: {lang}")
-            return False
+            logger.info(f"No specific Docker template found for language: {lang}. Falling back to LLM generation.")
+            strategy = LLMDockerTemplate()
 
-        content = strategy.generate_dockerfile(findings)
+        if inspect.iscoroutinefunction(strategy.generate_dockerfile):
+            content = await strategy.generate_dockerfile(findings)
+        else:
+            content = strategy.generate_dockerfile(findings)
         
         if content:
             try:
