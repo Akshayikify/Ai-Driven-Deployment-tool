@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Bot, MessageCircle, Zap, Brain, Sparkles, Send, User, RefreshCw } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from "@clerk/clerk-react";
 import { cn } from "@/lib/utils";
 
 interface AIAgentProps {
@@ -20,6 +21,7 @@ interface Message {
 }
 
 export default function AIAgent({ className }: AIAgentProps) {
+  const { userId } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -63,18 +65,18 @@ export default function AIAgent({ className }: AIAgentProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleRepositoryAnalysis = async (url: string, token?: string) => {
-    try {
-      setIsTyping(true);
-      setCurrentTask("Cloning repository...");
+  const handleRepositoryAnalysis = async (url: string) => {
+    setIsTyping(true);
+    setCurrentTask("Analyzing repository structure...");
 
+    try {
       const response = await fetch("http://127.0.0.1:8000/api/v1/analyze/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           repo_url: url,
           branch: "main",
-          github_token: token || null
+          user_id: userId || null
         }),
       });
 
@@ -88,7 +90,7 @@ export default function AIAgent({ className }: AIAgentProps) {
       const agentResponse: Message = {
         id: Date.now().toString(),
         type: 'agent',
-        content: `### Repository Analysis Initiated\n\nI've detected a GitHub repository and started the automated analysis process.\n\n**Task Details:**\n- **ID:** \`${data.task_id}\`\n- **Status:** ⏳ Queued\n\n**Authentication:**\n${token ? "-  **Token Provided:** I will attempt to push changes back to the repository." : "- ℹ️ **No Token:** I will only perform a local environment analysis."}\n\n---\n*You can monitor the progress in real-time using the **Deployment Logs** and **Timeline** cards below.*`,
+        content: `### Repository Analysis Initiated\n\nI've detected a GitHub repository and started the automated analysis process.\n\n**Task Details:**\n- **ID:** \`${data.task_id}\`\n- **Status:** ⏳ Queued\n\n**Authentication:**\n${userId ? "-  **Token Authenticated via Account:** I will attempt to push changes back to the repository." : "- ℹ️ **No Account Linked:** I will only perform a local environment analysis."}\n\n---\n*You can monitor the progress in real-time using the **Deployment Logs** and **Timeline** cards below.*`,
         timestamp: new Date()
       };
 
@@ -120,12 +122,8 @@ export default function AIAgent({ className }: AIAgentProps) {
 
     if (match) {
       const url = match[0];
-      // Try to find a token after the URL (either ghp_... or a long hex-like string)
-      const restOfInput = inputValue.substring(match.index! + url.length).trim();
-      const tokenMatch = restOfInput.match(/^(ghp_[\w]+|[\w]{30,40})/);
-      const token = tokenMatch ? tokenMatch[0] : undefined;
 
-      await handleRepositoryAnalysis(url, token);
+      await handleRepositoryAnalysis(url);
       return;
     }
 
