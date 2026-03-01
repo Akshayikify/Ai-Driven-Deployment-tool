@@ -12,6 +12,11 @@ class AIProvider(ABC):
         """Generates a conversational response based on the user's message."""
         pass
 
+    @abstractmethod
+    async def generate_dockerfile(self, prompt: str) -> Optional[str]:
+        """Generates a raw Dockerfile string from a prompt."""
+        pass
+
     def _get_prompt(self, findings: Dict[str, Any]) -> str:
         file_list = findings.get("file_index", {}).get("all_files", [])[:100]
         return f"""

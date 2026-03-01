@@ -64,4 +64,37 @@ class AIService:
                 
         return "I'm sorry, I'm having trouble connecting to my AI backend right now. Please try again later."
 
+    async def generate_dockerfile(self, findings: Dict[str, Any]) -> Optional[str]:
+        """
+        Orchestrates LLM generation of a fallback Dockerfile for an unrecognized project.
+        """
+        if not self.providers:
+            logger.warning("No AI providers configured. Cannot generate fallback Dockerfile.")
+            return None
+
+        file_list = findings.get("file_index", {}).get("all_files", [])[:500]
+        prompt = f"""
+        Write a production-ready, highly optimized Dockerfile for the following repository.
+        The language was detected as: {findings.get('language')}, Framework: {findings.get('framework')}.
+
+        Project Files:
+        {", ".join(file_list)}
+
+        Output EXACTLY AND ONLY the raw Dockerfile content. NO explanations, NO markdown code blocks, NO backticks.
+        """
+
+        for provider in self.providers:
+            try:
+                logger.info(f"Attempting Dockerfile generation with {provider.__class__.__name__}...")
+                response = await provider.generate_dockerfile(prompt)
+                if response:
+                    logger.info(f"Generated Dockerfile using {provider.__class__.__name__}")
+                    return response
+            except Exception as e:
+                logger.error(f"Provider {provider.__class__.__name__} failed Dockerfile gen: {e}")
+                continue
+                
+        logger.warning("All AI providers failed to generate Dockerfile.")
+        return None
+
 ai_service = AIService()

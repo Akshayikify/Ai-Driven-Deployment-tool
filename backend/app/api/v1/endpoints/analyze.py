@@ -77,7 +77,7 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
     
     # 3. Generate Deployment Files
     task_manager.update_task(task_id, "generating")
-    file_generator.generate_deployment_files(workspace, findings)
+    await file_generator.generate_deployment_files(workspace, findings)
 
     # 4. Push changes if token provided
     if github_token:

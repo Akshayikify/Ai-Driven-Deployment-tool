@@ -37,3 +37,20 @@ class GeminiProvider(AIProvider):
         except Exception as e:
             logger.error(f"Gemini chat failed: {e}")
             return None
+
+    async def generate_dockerfile(self, prompt: str) -> Optional[str]:
+        if not self.model:
+            return None
+
+        try:
+            response = self.model.generate_content(prompt)
+            text = response.text.strip()
+            # Strip markdown code blocks if the LLM includes them
+            if text.startswith("```"):
+                lines = text.split("\n")
+                if len(lines) > 1 and lines[-1].startswith("```"):
+                    text = "\n".join(lines[1:-1])
+            return text
+        except Exception as e:
+            logger.error(f"Gemini Dockerfile generation failed: {e}")
+            return None

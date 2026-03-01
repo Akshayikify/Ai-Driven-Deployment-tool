@@ -60,3 +60,30 @@ class OpenRouterProvider(AIProvider):
         except Exception as e:
             logger.error(f"OpenRouter chat failed: {e}")
             return None
+
+    async def generate_dockerfile(self, prompt: str) -> Optional[str]:
+        if not self.client:
+            return None
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are an expert DevOps engineer. Output ONLY the raw content of the requested Dockerfile. Do not use Markdown formatting blocks or explanations."},
+                    {"role": "user", "content": prompt}
+                ],
+                extra_headers={
+                    "HTTP-Referer": "https://github.com/Akshayikify/Auto_Deployment_tool",
+                    "X-Title": "Auto Deploy AI",
+                }
+            )
+            text = response.choices[0].message.content.strip()
+            # Strip markdown code blocks just in case
+            if text.startswith("```"):
+                lines = text.split("\n")
+                if len(lines) > 1 and lines[-1].startswith("```"):
+                    text = "\n".join(lines[1:-1])
+            return text
+        except Exception as e:
+            logger.error(f"OpenRouter Dockerfile generation failed: {e}")
+            return None
