@@ -4,8 +4,10 @@ from typing import Optional
 from app.services.repository import repo_service
 from app.services.analysis import analysis_engine
 from app.services.generator import file_generator
+from app.core.config import settings
 from loguru import logger
 import uuid
+import httpx
 
 from app.services.task_manager import task_manager
 
@@ -16,13 +18,45 @@ router = APIRouter()
 class AnalyzeRequest(BaseModel):
     repo_url: str
     branch: str = "main"
-    github_token: Optional[str] = None
+    user_id: Optional[str] = None
 
-async def analyze_repo_task(task_id: str, repo_url: str, branch: str, github_token: Optional[str] = None):
+async def fetch_github_token(user_id: str) -> Optional[str]:
+    """Fetches the GitHub OAuth token for a user from Clerk."""
+    if not settings.CLERK_SECRET_KEY:
+        logger.warning("CLERK_SECRET_KEY is not set. Cannot fetch token.")
+        return None
+        
+    url = f"https://api.clerk.dev/v1/users/{user_id}/oauth_access_tokens/oauth_github"
+    headers = {
+        "Authorization": f"Bearer {settings.CLERK_SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            tokens = response.json()
+            if tokens and len(tokens) > 0:
+                return tokens[0].get("token")
+        except Exception as e:
+            logger.error(f"Failed to fetch GitHub token from Clerk for {user_id}: {e}")
+            
+    return None
+
+async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: Optional[str] = None):
     """
     Background task to clone, analyze, and generate files for a repo.
     """
     logger.info(f"Starting analysis task {task_id} for {repo_url}")
+    
+    github_token = None
+    if user_id:
+        task_manager.update_task(task_id, "authenticating", message="Fetching GitHub token securely...")
+        github_token = await fetch_github_token(user_id)
+        if not github_token:
+            logger.warning(f"Task {task_id}: Could not fetch GitHub token for user {user_id}. Proceeding without auth.")
+    
     task_manager.update_task(task_id, "cloning")
     
     # 1. Clone
@@ -65,7 +99,7 @@ async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTa
     # Initialize task status
     task_manager.update_task(task_id, "initialized")
     
-    background_tasks.add_task(analyze_repo_task, task_id, request.repo_url, request.branch, request.github_token)
+    background_tasks.add_task(analyze_repo_task, task_id, request.repo_url, request.branch, request.user_id)
     
     return {
         "status": "queued",
