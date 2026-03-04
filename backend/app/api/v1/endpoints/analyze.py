@@ -57,10 +57,14 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
         if not github_token:
             logger.warning(f"Task {task_id}: Could not fetch GitHub token for user {user_id}. Proceeding without auth.")
     
-    task_manager.update_task(task_id, "cloning")
+    import time
     
     # 1. Clone
+    task_manager.update_task(task_id, "cloning")
+    t0 = time.time()
     workspace = repo_service.clone_repository(repo_url, branch, token=github_token)
+    t_clone = time.time() - t0
+    
     if not workspace:
         logger.error(f"Task {task_id}: Cloning failed.")
         task_manager.update_task(task_id, "failed", message="Cloning failed.")
@@ -68,28 +72,47 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
 
     # 2. Analyze
     task_manager.update_task(task_id, "analyzing")
+    t0 = time.time()
     findings = analysis_engine.analyze_directory(workspace)
     
     # AI Refinement if confidence is low
     if findings.get("confidence", 0) < 0.7:
         logger.info(f"Task {task_id}: Low confidence ({findings.get('confidence')}). Requesting AI refinement...")
         findings = await ai_service.refine_analysis(findings)
+    t_analyze = time.time() - t0
     
     # 3. Generate Deployment Files
     task_manager.update_task(task_id, "generating")
+    t0 = time.time()
     await file_generator.generate_deployment_files(workspace, findings)
+    t_generate = time.time() - t0
 
     # 4. Push changes if token provided
+    t_push = 0
     if github_token:
         task_manager.update_task(task_id, "pushing")
         logger.info(f"Task {task_id}: Attempting to push changes...")
+        t0 = time.time()
         repo_service.push_changes(workspace)
+        t_push = time.time() - t0
 
     # 5. Cleanup
     repo_service.cleanup_workspace(workspace)
     
+    # Log Timing Summary
+    summary_msg = (
+        f"⏱️ Deployment Preparation Time Summary:\n"
+        f"  - Repository Cloning: {t_clone:.2f}s\n"
+        f"  - Deep AI Analysis: {t_analyze:.2f}s\n"
+        f"  - Asset Generation: {t_generate:.2f}s\n"
+    )
+    if github_token:
+         summary_msg += f"  - Remote GitHub Push: {t_push:.2f}s\n"
+    
+    summary_msg += f"  => Total Time Saved: {(t_clone + t_analyze + t_generate + t_push):.2f}s vs Manual Deployment"
+    logger.info(summary_msg)
+    
     task_manager.update_task(task_id, "completed")
-    logger.info(f"Task {task_id}: Analysis and generation complete.")
 
 @router.post("/analyze")
 async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTasks):
