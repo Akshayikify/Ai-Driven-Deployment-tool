@@ -95,7 +95,7 @@ class FileGenerator:
 
     def generate_cicd_workflow(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
         """
-        Generates a GitHub Actions CI/CD workflow based on project.
+        Generates a GitHub Actions CI/CD workflow based on project detected language using the template strategy.
         """
         github_dir = os.path.join(workspace_path, ".github", "workflows")
         os.makedirs(github_dir, exist_ok=True)
@@ -104,24 +104,13 @@ class FileGenerator:
         if os.path.exists(workflow_path):
             return False
 
-        content = """name: Auto-Deployment CI/CD
+        lang = findings.get("language")
+        strategy = self.strategies.get(lang)
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+        # Fallback to base template if no specific strategy
+        from .docker_templates.base import DockerTemplate
+        content = strategy.generate_cicd_workflow(findings) if strategy else DockerTemplate().generate_cicd_workflow(findings)
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Build Docker image
-        run: docker build -t app:latest .
-"""
         try:
             with open(workflow_path, "w") as f:
                 f.write(content)
