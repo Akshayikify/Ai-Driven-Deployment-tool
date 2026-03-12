@@ -112,6 +112,13 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
     summary_msg += f"  => Total Time Saved: {(t_clone + t_analyze + t_generate + t_push):.2f}s vs Manual Deployment"
     logger.info(summary_msg)
     
+    # 6. Trigger Live GitHub Actions Monitoring
+    if github_token:
+        # We spawn this as a background asyncio task so it doesn't block the HTTP response or Task Manager
+        import asyncio
+        from app.services.github_actions import github_actions_service
+        asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token))
+        
     task_manager.update_task(task_id, "completed")
 
 @router.post("/analyze")
