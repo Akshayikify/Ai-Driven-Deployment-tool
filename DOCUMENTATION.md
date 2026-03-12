@@ -43,8 +43,13 @@ Ai-Driven-Deployment-tool/
 ### 3.3 Dynamic Deployment Asset Generation (`FileGenerator`)
 - Based on the `AnalysisEngine`'s results, the generator orchestrates standard deployment packages.
 - **Hardcoded Templates:** Highly optimized Docker templates are instantly applied for recognized environments (`Node.js`, `Python`, `PHP`).
-- **CI/CD Creation:** Standardizes GitHub Actions pipelines into `.github/workflows/deploy.yml`.
+- **CI/CD Creation:** Generates language-specific GitHub Actions pipelines (`.github/workflows/deploy.yml`) that automatically test the code and publish built Docker images directly to the **GitHub Container Registry (GHCR)**.
 - **Environment Discovery:** Automatically discovers variables injected via code parsing and generates `.env.example` boilerplates.
+
+### 3.4 Live GitHub Actions Monitoring (`GitHubActionsService`)
+- Once the CI/CD pipeline is pushed to the user's remote repository, the backend initiates an asynchronous polling service (`github_actions.py`).
+- **Jobs API Integration:** It continuously polls the GitHub REST API using the user's delegated OAuth token to fetch live job step states.
+- **Real-Time Log Ingestion:** As each deployment step (e.g., *Install dependencies*, *Run Tests*, *Build image*) begins, completes, or fails, the status is dynamically formatted and multiplexed natively into the frontend's Server-Sent Events (SSE) Live Log UI, keeping the user engaged without ever leaving the dashboard.
 
 ### 3.4 Generalized Language Deployment (LLM Fallback)
 - **Universal Support:** If a user submits a repository written in a language outside the standardized templates (e.g., Rust, Java, C#, Ruby), the generator routes to the `LLMDockerTemplate`.
@@ -61,4 +66,6 @@ Ai-Driven-Deployment-tool/
 - **Phase 2 (Analysis & Generation):** Complete, including LLM fallback generation.
 - **Phase 3 (Clerk OAuth):** Complete, securing cross-platform secrets.
 - **Phase 4 (Generalized LLM Fallback):** Complete.
-- **Phase 5 (Docker & Containerization Execution):** Pending. The upcoming lifecycle step involves connecting Docker daemons locally or via cloud runners to actively build, run, and host the generated images.
+- **Phase 5 (CI/CD Pipeline Automation):** Complete. The backend now writes fully customized testing, linting, and Docker building GitHub Actions pipelines that automatically push to the GitHub Container Registry.
+- **Phase 6 (Live GitHub Actions Monitoring):** Complete. Real-time CI/CD step statuses are streamed directly into the dashboard logs via REST API polling.
+- **Phase 7 (Container Orchestration Strategy):** Pending. Exploring options to automatically run or host the uploaded GHCR packages natively or via external providers.
