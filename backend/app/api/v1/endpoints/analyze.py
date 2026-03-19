@@ -143,3 +143,31 @@ async def get_task_status(task_id: str):
     if not status:
         raise HTTPException(status_code=404, detail="Task not found")
     return status
+
+class AutoFixRequest(BaseModel):
+    repo_url: str
+    user_id: str
+    actions: list
+
+@router.post("/auto-fix")
+async def trigger_auto_fix(request: AutoFixRequest):
+    """Triggers the GitHub Auto-Fix mechanism using the user's Clerk Token."""
+    github_token = await fetch_github_token(request.user_id)
+    if not github_token:
+        raise HTTPException(status_code=401, detail="User GitHub token could not be retrieved.")
+
+    clean_url = request.repo_url.replace(".git", "")
+    parts = clean_url.split("/")
+    if len(parts) < 2:
+        raise HTTPException(status_code=400, detail="Invalid repository URL.")
+        
+    owner = parts[-2]
+    repo = parts[-1]
+
+    from app.services.github_actions import github_actions_service
+    success = await github_actions_service.apply_auto_fix(owner, repo, github_token, request.actions)
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to apply auto-fix to repository.")
+        
+    return {"status": "success", "message": "Auto-fix applied successfully. GitHub Actions will trigger a rebuild shortly."}

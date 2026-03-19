@@ -11,6 +11,8 @@ interface TimelineStep {
 interface DeploymentContextType {
     activeTaskId: string | null;
     setActiveTaskId: (id: string | null) => void;
+    repoUrl: string | null;
+    setRepoUrl: (url: string | null) => void;
     steps: TimelineStep[];
     currentMessage: string;
 }
@@ -52,6 +54,7 @@ const DeploymentContext = createContext<DeploymentContextType | undefined>(undef
 
 export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+    const [repoUrl, setRepoUrl] = useState<string | null>(null);
     const [steps, setSteps] = useState<TimelineStep[]>(defaultSteps);
     const [currentMessage, setCurrentMessage] = useState<string>("Ready for deployment");
 
@@ -92,7 +95,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     }, [activeTaskId]);
 
     return (
-        <DeploymentContext.Provider value={{ activeTaskId, setActiveTaskId, steps, currentMessage }}>
+        <DeploymentContext.Provider value={{ activeTaskId, setActiveTaskId, repoUrl, setRepoUrl, steps, currentMessage }}>
             {children}
         </DeploymentContext.Provider>
     );
