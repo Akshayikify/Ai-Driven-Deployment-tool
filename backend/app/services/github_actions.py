@@ -46,6 +46,71 @@ class GitHubActionsService:
                 logger.error(f"Failed to fetch jobs at {jobs_url}: {e}")
         return []
 
+    async def _get_job_logs(self, owner: str, repo: str, job_id: int, token: str) -> Optional[str]:
+        """Downloads the raw logs for a specific job."""
+        url = f"{self.api_base}/repos/{owner}/{repo}/actions/jobs/{job_id}/logs"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                # GitHub redirects the log download, so we need follow_redirects=True
+                response = await client.get(url, headers=headers, follow_redirects=True)
+                response.raise_for_status()
+                return response.text
+            except Exception as e:
+                logger.error(f"Failed to download logs for job {job_id}: {e}")
+        return None
+
+    async def apply_auto_fix(self, owner: str, repo: str, token: str, actions: list) -> bool:
+        """Applies an auto-fix payload to the repository using the GitHub API."""
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        
+        async with httpx.AsyncClient() as client:
+            for action_item in actions:
+                path = action_item.get("path")
+                content = action_item.get("content")
+                
+                if not path or not content:
+                    continue
+                    
+                import base64
+                encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+                
+                # Check if file exists to get its SHA (required for updating files)
+                file_url = f"{self.api_base}/repos/{owner}/{repo}/contents/{path}"
+                file_sha = None
+                
+                try:
+                    resp = await client.get(file_url, headers=headers)
+                    if resp.status_code == 200:
+                        file_sha = resp.json().get("sha")
+                except Exception:
+                    pass # File might not exist, which is fine for create
+                
+                payload = {
+                    "message": f"Auto-Fix applied by AI Agent: {path}",
+                    "content": encoded_content,
+                }
+                
+                if file_sha:
+                    payload["sha"] = file_sha
+                    
+                try:
+                    put_resp = await client.put(file_url, headers=headers, json=payload)
+                    put_resp.raise_for_status()
+                    logger.info(f"[AI Agent] Successfully pushed fix for {path}")
+                except Exception as e:
+                    logger.error(f"[AI Agent] Failed to push fix for {path}: {e}")
+                    return False
+        return True
+
     async def monitor_workflow(self, repo_url: str, token: str):
         """
         Monitors a newly triggered GitHub Actions workflow and logs the progress natively.
@@ -121,9 +186,38 @@ class GitHubActionsService:
                     logger.info(f"🎉 Pipeline Complete! Your application is officially deployed and stored in GHCR!")
                 else:
                     logger.error(f"🚨 Pipeline terminated with conclusion: {conclusion}. Please check your GitHub Actions tab.")
+                    logger.info(f"🔗 View Full Logs: https://github.com/{owner}/{repo}/actions/runs/{run_id}")
+                    
+                    # AI Auto-Fixing Trigger
+                    logger.info(f"[AI Agent] 🧠 Downloading crash logs for analysis...")
+                    
+                    # Find a failed job to analyze
+                    failed_job = None
+                    for job in jobs:
+                        if job.get("conclusion") == "failure":
+                            failed_job = job
+                            break
+                    
+                    if failed_job:
+                        job_id = failed_job.get("id")
+                        raw_logs = await self._get_job_logs(owner, repo, job_id, token)
+                        if raw_logs:
+                            from app.services.ai_service import ai_service
+                            # Get the actual filename of the workflow that failed
+                            workflow_path = run.get("path")
+                            diagnosis_json = await ai_service.analyze_build_failure(raw_logs, repo_url, workflow_path)
+                            if diagnosis_json:
+                                logger.info(f"[AUTO_FIX_PAYLOAD] {diagnosis_json}")
+                            else:
+                                logger.error(f"[AI Agent] Could not analyze the logs.")
+                        else:
+                            logger.error(f"[AI Agent] Could not download logs for job {failed_job.get('name')} to perform analysis.")
+                    else:
+                        logger.warning(f"[AI Agent] Could not identify which specific job failed in the run.")
                 
-                # Link to the actions tab natively
-                logger.info(f"🔗 View Full Logs: https://github.com/{owner}/{repo}/actions/runs/{run_id}")
+                # Link to the actions tab natively (if it was success, we still link it here, but we already linked it early for failure)
+                if conclusion == "success":
+                    logger.info(f"🔗 View Full Logs: https://github.com/{owner}/{repo}/actions/runs/{run_id}")
                 break
                 
             # Poll every 4 seconds

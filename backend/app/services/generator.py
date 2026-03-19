@@ -6,6 +6,7 @@ import inspect
 from .docker_templates.python_template import PythonDockerTemplate
 from .docker_templates.node_template import NodeDockerTemplate
 from .docker_templates.php_template import PHPDockerTemplate
+from .docker_templates.java_template import JavaDockerTemplate
 from .docker_templates.llm_template import LLMDockerTemplate
 
 class FileGenerator:
@@ -13,8 +14,13 @@ class FileGenerator:
         self.strategies = {
             "Python": PythonDockerTemplate(),
             "JavaScript/TypeScript": NodeDockerTemplate(),
-            "PHP": PHPDockerTemplate()
+            "PHP": PHPDockerTemplate(),
+            "Java": JavaDockerTemplate()
         }
+
+    def _get_strategy(self, findings: Dict[str, Any]):
+        lang = findings.get("language")
+        return self.strategies.get(lang, LLMDockerTemplate())
 
     async def generate_deployment_files(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
         """
@@ -47,11 +53,7 @@ class FileGenerator:
             return False
 
         lang = findings.get("language")
-        strategy = self.strategies.get(lang)
-
-        if not strategy:
-            logger.info(f"No specific Docker template found for language: {lang}. Falling back to LLM generation.")
-            strategy = LLMDockerTemplate()
+        strategy = self._get_strategy(findings)
 
         if inspect.iscoroutinefunction(strategy.generate_dockerfile):
             content = await strategy.generate_dockerfile(findings)
@@ -77,12 +79,8 @@ class FileGenerator:
         if os.path.exists(ignore_path):
             return False
 
-        lang = findings.get("language")
-        strategy = self.strategies.get(lang)
-
-        # Fallback to base ignore if no specific strategy
-        from .docker_templates.base import DockerTemplate
-        content = strategy.generate_dockerignore(findings) if strategy else ".git\nnode_modules\n__pycache__\n"
+        strategy = self._get_strategy(findings)
+        content = strategy.generate_dockerignore(findings)
 
         try:
             with open(ignore_path, "w") as f:
@@ -104,12 +102,8 @@ class FileGenerator:
         if os.path.exists(workflow_path):
             return False
 
-        lang = findings.get("language")
-        strategy = self.strategies.get(lang)
-
-        # Fallback to base template if no specific strategy
-        from .docker_templates.base import DockerTemplate
-        content = strategy.generate_cicd_workflow(findings) if strategy else DockerTemplate().generate_cicd_workflow(findings)
+        strategy = self._get_strategy(findings)
+        content = strategy.generate_cicd_workflow(findings)
 
         try:
             with open(workflow_path, "w") as f:

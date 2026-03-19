@@ -97,4 +97,60 @@ class AIService:
         logger.warning("All AI providers failed to generate Dockerfile.")
         return None
 
+    async def analyze_build_failure(self, logs: str, repo_url: str, workflow_path: str = None) -> Optional[str]:
+        """
+        Analyzes failed GitHub Actions logs and provides a strict JSON payload with diagnosis and file fixes.
+        """
+        if not self.providers:
+            return None
+
+        # Truncate logs to avoid massive context window payloads
+        truncated_logs = logs[-8000:] if len(logs) > 8000 else logs
+
+        context_hint = f" The original workflow filename was identified as: {workflow_path}." if workflow_path else ""
+
+        prompt = f"""
+        You are an expert DevOps engineer and AI assistant. The following are the raw terminal logs from a failed GitHub Actions CI/CD pipeline run for the repository: {repo_url}.{context_hint}
+
+        <logs>
+        {truncated_logs}
+        </logs>
+        
+        Please analyze these logs and determine exactly how to fix the repository code to make the pipeline pass.
+        If you are modifying a workflow file, make sure it is the correct filename (e.g., '.github/workflows/deploy.yml' or as specified in the hint).
+        You MUST respond ONLY with a valid JSON object. No markdown formatting, no conversational text.
+        
+        The JSON MUST perfectly follow this schema:
+        {{
+            "diagnosis": "A concise 2-sentence explanation of why it failed and what you are doing to fix it.",
+            "actions": [
+                {{
+                    "action": "create_file",  // or "modify_file"
+                    "path": "path/to/file.ext", // relative to repository root
+                    "content": "The exact full file contents to write..."
+                }}
+            ]
+        }}
+        """
+
+        for provider in self.providers:
+            try:
+                logger.info(f"Attempting log analysis with {provider.__class__.__name__}...")
+                response = await provider.chat(prompt) 
+                if response:
+                    # Clean up markdown JSON blocks if the LLM ignored instructions
+                    cleaned = response.strip()
+                    if cleaned.startswith("```json"):
+                        cleaned = cleaned[7:]
+                    if cleaned.startswith("```"):
+                        cleaned = cleaned[3:]
+                    if cleaned.endswith("```"):
+                        cleaned = cleaned[:-3]
+                    return cleaned.strip()
+            except Exception as e:
+                logger.error(f"Provider {provider.__class__.__name__} failed log analysis: {e}")
+                continue
+                
+        return None
+
 ai_service = AIService()

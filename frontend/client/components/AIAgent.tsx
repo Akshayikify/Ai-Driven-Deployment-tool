@@ -36,7 +36,7 @@ export default function AIAgent({ className }: AIAgentProps) {
   const [currentTask, setCurrentTask] = useState("Ready to assist with your deployment...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { setActiveTaskId } = useDeployment();
+  const { setActiveTaskId, setRepoUrl } = useDeployment();
 
   const agentCapabilities = [
     { icon: Brain, label: "Code Analysis", status: "active" },
@@ -82,9 +82,10 @@ export default function AIAgent({ className }: AIAgentProps) {
 
       const data = await response.json();
 
-      // Update the global active task ID to trigger timeline updates
+      // Update the global active task ID and repo URL to trigger timeline and auto-fix capabilities
       if (data.task_id) {
         setActiveTaskId(data.task_id);
+        setRepoUrl(url);
       }
 
       const agentResponse: Message = {

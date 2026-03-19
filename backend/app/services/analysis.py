@@ -55,6 +55,7 @@ class AnalysisEngine:
         self._detect_ruby(findings, workspace_path)
         self._detect_swift(findings, workspace_path)
         self._detect_html(findings, workspace_path)
+        self._detect_java(findings, workspace_path)
         
         # 3. Detect Architecture
         if "package.json" in file_index["by_name"] and ("requirements.txt" in file_index["by_name"] or "pyproject.toml" in file_index["by_name"]):
@@ -211,5 +212,27 @@ class AnalysisEngine:
                 findings["confidence"] += 0.2
 
         return findings
+
+    def _detect_java(self, findings: dict, workspace_path: str):
+        file_index = findings["file_index"]
+        java_signals = ["pom.xml", "build.gradle", "settings.gradle", "mvnw", "gradlew"]
+        detected_signals = [s for s in java_signals if s in file_index["by_name"]]
+        
+        if detected_signals:
+            findings["language"] = "Java"
+            findings["detected_files"].extend(detected_signals)
+            findings["confidence"] = max(findings["confidence"], 0.6)
+            
+            if "pom.xml" in file_index["by_name"]:
+                findings["framework"] = "Maven / Spring Boot"
+                findings["confidence"] += 0.2
+            elif "build.gradle" in file_index["by_name"]:
+                findings["framework"] = "Gradle"
+                findings["confidence"] += 0.2
+            
+            # Find probable entry points
+            if "Application.java" in file_index["by_name"]:
+                findings["entry_point"] = file_index["by_name"]["Application.java"][0]
+                findings["confidence"] += 0.1
 
 analysis_engine = AnalysisEngine()
