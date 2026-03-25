@@ -191,10 +191,11 @@ class GitHubActionsService:
                     # AI Auto-Fixing Trigger
                     logger.info(f"[AI Agent] 🧠 Downloading crash logs for analysis...")
                     
-                    # Find a failed job to analyze
+                    # Find a failed job to analyze (any job that isn't success)
                     failed_job = None
                     for job in jobs:
-                        if job.get("conclusion") == "failure":
+                        job_conclusion = job.get("conclusion")
+                        if job_conclusion in ["failure", "timed_out", "cancelled", "action_required"]:
                             failed_job = job
                             break
                     

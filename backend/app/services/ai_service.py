@@ -80,6 +80,14 @@ class AIService:
         Project Files:
         {", ".join(file_list)}
 
+        VERIFIED DOCKER KNOWLEDGE BASE (Use these specific tags, avoid generic -slim for Temurin):
+        - Java (Builder): maven:3-eclipse-temurin-17-alpine, maven:3.8-openjdk-11-slim
+        - Java (Runtime): eclipse-temurin:17-jre-alpine, eclipse-temurin:11-jre-focal
+        - Node.js: node:18-alpine, node:20-slim, node:16-bullseye-slim
+        - Python: python:3.11-slim, python:3.9-alpine, python:3.10-bookworm
+        - Go: golang:1.21-alpine, golang:1.20-bookworm
+        - PHP: php:8.2-fpm-alpine, php:8.1-apache
+
         Output EXACTLY AND ONLY the raw Dockerfile content. NO explanations, NO markdown code blocks, NO backticks.
         """
 
@@ -118,6 +126,36 @@ class AIService:
         
         Please analyze these logs and determine exactly how to fix the repository code to make the pipeline pass.
         If you are modifying a workflow file, make sure it is the correct filename (e.g., '.github/workflows/deploy.yml' or as specified in the hint).
+        
+        STRICT DIAGNOSTIC PROTOCOL:
+        1. Identify the EXACT failing command (look for 'RUN' steps or 'exit code: 1').
+        2. Read the error message IMMEDIATELY following that command. 
+        3. Do NOT guess or assume 'protocol' errors (like https vs https\) unless you see a 'Protocol error' or 'SSL error' in the raw log.
+        4. If it's a Maven build:
+            - If it mentions 'No such file': Check if pom.xml was copied.
+            - If it mentions 'Permission denied': Recommend 'chmod +x mvnw'.
+            - If it mentions 'mvn: not found': Recommend a 'maven' builder image.
+            - If it mentions a weird '$'\r' symbol': It's a Windows line ending issue; recommend 'sed -i 's/\r$//' mvnw'.
+
+        VERIFIED DOCKER KNOWLEDGE BASE (Use these specific tags, avoid generic -slim for Temurin):
+        - Java (Builder): maven:3-eclipse-temurin-17-alpine, maven:3.8-openjdk-11-slim
+        - Java (Runtime): eclipse-temurin:17-jre-alpine, eclipse-temurin:11-jre-focal
+        - Node.js: node:18-alpine, node:20-slim, node:16-bullseye-slim
+        - Python: python:3.11-slim, python:3.9-alpine, python:3.10-bookworm
+        - Go: golang:1.21-alpine, golang:1.20-bookworm
+        - PHP: php:8.2-fpm-alpine, php:8.1-apache
+
+        TIPS FOR DOCKERFILE ERRORS:
+        - If 'mvn' not found: Use a 'maven' builder image.
+        - If 'mvnw' permission denied: Add 'chmod +x mvnw' before running.
+        - If 'javac' not found: Use a 'jdk' image, not 'jre'.
+
+        CRITICAL CONSTRAINTS:
+        - NEVER suggest 'fixing the Maven version URL protocol' if the error is a generic 'exit code: 1' during compilation.
+        - Always provide the FULL content of any file you create or modify, not just a snippet.
+        - Do NOT remove or bypass critical deployment stages such as 'Build and push Docker image', 'Log in to the Container registry', or 'Extract metadata'.
+        - If an image tag is 'Not Found', cross-check with the Verified Knowledge Base above and use an alpine or full version.
+        
         You MUST respond ONLY with a valid JSON object. No markdown formatting, no conversational text.
         
         The JSON MUST perfectly follow this schema:

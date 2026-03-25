@@ -24,6 +24,28 @@ class MongoDB:
             self.client.close()
             logger.info("MongoDB connection closed.")
 
+    async def verify_connection(self):
+        try:
+            await self.client.admin.command('ping')
+            return True
+        except Exception:
+            return False
+
+    async def store_user_data(self, user_data: dict):
+        if not self.db:
+            await self.connect_to_mongo()
+        
+        try:
+            result = await self.db.users.update_one(
+                {"email": user_data["email"]},
+                {"$set": {**user_data, "updated_at": "2026-03-25"}},
+                upsert=True
+            )
+            return str(result.upserted_id if result.upserted_id else "modified")
+        except Exception as e:
+            logger.error(f"Error storing user data: {e}")
+            raise e
+
 db = MongoDB()
 
 async def get_database():

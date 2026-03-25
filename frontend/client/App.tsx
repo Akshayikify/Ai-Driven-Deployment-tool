@@ -12,11 +12,13 @@ import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 
 import { DeploymentProvider } from "@/context/DeploymentContext";
+import UserSync from "@/components/UserSync";
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
     <DeploymentProvider>
       <BrowserRouter>
+        <UserSync />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
