@@ -4,35 +4,51 @@ from .base import DockerTemplate
 class JavaDockerTemplate(DockerTemplate):
     def generate_dockerfile(self, findings: Dict[str, Any]) -> str:
         """
-        Generates a multi-stage Dockerfile for a Spring Boot Maven project.
+        Generates a more robust multi-stage Dockerfile for a Spring Boot Maven project.
         """
-        return (
-            "FROM eclipse-temurin:17-alpine AS builder\n"
-            "WORKDIR /app\n"
-            "\n"
-            "COPY .mvn ./.mvn\n"
-            "COPY mvnw ./mvnw\n"
-            "COPY mvnw.cmd ./mvnw.cmd\n"
-            "COPY pom.xml ./pom.xml\n"
-            "COPY src ./src\n"
-            "\n"
-            "RUN ./mvnw package -DskipTests\n"
-            "\n"
-            "FROM eclipse-temurin:17-alpine\n"
-            "WORKDIR /app\n"
-            "\n"
-            "COPY --from=builder /app/target/*.jar app.jar\n"
-            "\n"
-            "EXPOSE 8080\n"
-            "\n"
-            "ENTRYPOINT [\"java\", \"-jar\", \"app.jar\"]\n"
-        )
+        file_names = findings.get("file_index", {}).get("by_name", {})
+        has_mvnw = "mvnw" in file_names
+        has_mvn_dir = ".mvn" in file_names or any(".mvn/" in f for f in findings.get("file_index", {}).get("all_files", []))
+
+        content = [
+            "FROM maven:3-eclipse-temurin-17-alpine AS builder",
+            "WORKDIR /app",
+            "",
+            "COPY pom.xml .",
+        ]
+
+        if has_mvn_dir:
+            content.append("COPY .mvn ./.mvn")
+        
+        if has_mvnw:
+            content.append("COPY mvnw ./")
+            content.append("COPY mvnw.cmd ./")
+        
+        content.extend([
+            "COPY src ./src",
+            "",
+            "# Fix line endings for the wrapper and prefer system mvn if wrapper fails",
+            "RUN if [ -f \"./mvnw\" ]; then sed -i 's/\\r$//' mvnw && chmod +x mvnw; fi",
+            "RUN mvn package -DskipTests || ./mvnw package -DskipTests",
+            "",
+            "FROM eclipse-temurin:17-jre-alpine",
+            "WORKDIR /app",
+            "",
+            "COPY --from=builder /app/target/*.jar app.jar",
+            "",
+            "EXPOSE 8080",
+            "",
+            'ENTRYPOINT ["java", "-jar", "app.jar"]'
+        ])
+
+        return "\n".join(content)
 
     def generate_dockerignore(self, findings: Dict[str, Any]) -> str:
         """
-        Generates a .dockerignore file for Java projects.
+        Generates a correct .dockerignore file for Java projects.
+        We must NOT ignore the wrapper files if we need them.
         """
-        return ".git\ntarget/\n*.class\n.mvn/\nmvnw\nmvnw.cmd\n"
+        return ".git\ntarget/\n*.class\n"
 
     def generate_cicd_workflow(self, findings: Dict[str, Any]) -> str:
         """
@@ -49,6 +65,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -60,11 +80,14 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Make mvnw executable
-        run: chmod +x mvnw
-
       - name: Build with Maven
-        run: ./mvnw -B package --file pom.xml -DskipTests
+        run: |
+          if [ -f "mvnw" ]; then
+            chmod +x mvnw
+            ./mvnw -B package --file pom.xml -DskipTests || mvn -B package --file pom.xml -DskipTests
+          else
+            mvn -B package --file pom.xml -DskipTests
+          fi
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -73,12 +96,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Lowercase repository name
+        run: echo "IMAGE_ID=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ env.IMAGE_ID }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 """

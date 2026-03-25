@@ -170,4 +170,8 @@ async def trigger_auto_fix(request: AutoFixRequest):
     if not success:
         raise HTTPException(status_code=500, detail="Failed to apply auto-fix to repository.")
         
+    # Re-trigger monitoring for the new pipeline run triggered by the fix
+    import asyncio
+    asyncio.create_task(github_actions_service.monitor_workflow(request.repo_url, github_token))
+
     return {"status": "success", "message": "Auto-fix applied successfully. GitHub Actions will trigger a rebuild shortly."}
