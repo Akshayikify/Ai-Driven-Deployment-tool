@@ -111,22 +111,28 @@ class GitHubActionsService:
                     return False
         return True
 
-    async def monitor_workflow(self, repo_url: str, token: str):
+    async def monitor_workflow(self, repo_url: str, token: str, task_id: Optional[str] = None):
         """
         Monitors a newly triggered GitHub Actions workflow and logs the progress natively.
+        Also updates the TaskManager if task_id is provideed.
         """
+        from app.services.task_manager import task_manager
+        
         # 1. Parse Owner and Repo from URL
-        # e.g., https://github.com/Akshayikify/SDC-Registration-Web-app.git
         clean_url = repo_url.replace(".git", "")
         parts = clean_url.split("/")
         if len(parts) < 2:
             logger.error(f"Could not parse repository owner and name from URL: {repo_url}")
+            if task_id:
+                task_manager.update_task(task_id, "failed", message="Invalid repository URL")
             return
             
         owner = parts[-2]
         repo = parts[-1]
 
         logger.info(f"🚀 Initializing GitHub Actions Monitor for {owner}/{repo}...")
+        if task_id:
+            task_manager.update_task(task_id, "building", message="Initializing GitHub Actions monitor...")
         
         # Give GitHub a few seconds to register the fresh push
         await asyncio.sleep(5)
@@ -134,20 +140,24 @@ class GitHubActionsService:
         run = await self._get_latest_workflow_run(owner, repo, token)
         if not run:
             logger.warning("Could not find a recent GitHub Actions workflow run.")
+            if task_id:
+                task_manager.update_task(task_id, "failed", message="Could not find a recent GitHub Actions workflow run.")
             return
             
         run_id = run["id"]
         run_name = run.get("name", "CI/CD Pipeline")
         jobs_url = run["jobs_url"]
+        commit_sha = run.get("head_sha", "N/A")[:7]
         
         logger.info(f"[GitHub Actions] ⏳ Pipeline Discovered: {run_name} (ID: {run_id})")
+        if task_id:
+            task_manager.update_task(task_id, "building", message=f"Pipeline Discovered: {run_name}", commit=commit_sha)
         
         # Track seen steps to avoid duplicate logging
         seen_steps = set()
         
         while True:
             run_status = await self._get_latest_workflow_run(owner, repo, token)
-            # If we lost it, abort gracefully
             if not run_status or run_status["id"] != run_id: 
                 break
 
@@ -160,18 +170,24 @@ class GitHubActionsService:
             for job in jobs:
                 job_name = job.get("name")
                 for step in job.get("steps", []):
-                    step_name = step.get("name")
+                    step_name = step.get("name").lower()
                     step_status = step.get("status")
                     step_conclusion = step.get("conclusion")
                     
                     # Create a unique ID for the step state
-                    step_id = f"{job_name}-{step_name}-{step_status}-{step_conclusion}"
+                    step_id_key = f"{job_name}-{step_name}-{step_status}-{step_conclusion}"
                     
-                    if step_id not in seen_steps:
-                        seen_steps.add(step_id)
+                    if step_id_key not in seen_steps:
+                        seen_steps.add(step_id_key)
                         
                         if step_status == "in_progress":
                             logger.info(f"[GitHub Actions] 🔄 Running: {step_name}")
+                            if task_id:
+                                # Try to distinguish between build and deploy
+                                if any(word in step_name for word in ["deploy", "push", "publish"]):
+                                    task_manager.update_task(task_id, "deploying", message=f"GitHub Actions: {step_name}")
+                                else:
+                                    task_manager.update_task(task_id, "building", message=f"GitHub Actions: {step_name}")
                         elif step_status == "completed":
                             if step_conclusion == "success":
                                 logger.info(f"[GitHub Actions] ✅ Success: {step_name}")
@@ -184,18 +200,19 @@ class GitHubActionsService:
             if status == "completed":
                 if conclusion == "success":
                     logger.info(f"🎉 Pipeline Complete! Your application is officially deployed and stored in GHCR!")
+                    if task_id:
+                        task_manager.update_task(task_id, "completed")
                 else:
                     logger.error(f"🚨 Pipeline terminated with conclusion: {conclusion}. Please check your GitHub Actions tab.")
-                    logger.info(f"🔗 View Full Logs: https://github.com/{owner}/{repo}/actions/runs/{run_id}")
+                    if task_id:
+                        task_manager.update_task(task_id, "failed", message=f"Pipeline failed with conclusion: {conclusion}")
                     
                     # AI Auto-Fixing Trigger
                     logger.info(f"[AI Agent] 🧠 Downloading crash logs for analysis...")
                     
-                    # Find a failed job to analyze (any job that isn't success)
                     failed_job = None
                     for job in jobs:
-                        job_conclusion = job.get("conclusion")
-                        if job_conclusion in ["failure", "timed_out", "cancelled", "action_required"]:
+                        if job.get("conclusion") in ["failure", "timed_out", "cancelled"]:
                             failed_job = job
                             break
                     
@@ -204,24 +221,15 @@ class GitHubActionsService:
                         raw_logs = await self._get_job_logs(owner, repo, job_id, token)
                         if raw_logs:
                             from app.services.ai_service import ai_service
-                            # Get the actual filename of the workflow that failed
                             workflow_path = run.get("path")
                             diagnosis_json = await ai_service.analyze_build_failure(raw_logs, repo_url, workflow_path)
                             if diagnosis_json:
                                 logger.info(f"[AUTO_FIX_PAYLOAD] {diagnosis_json}")
-                            else:
-                                logger.error(f"[AI Agent] Could not analyze the logs.")
-                        else:
-                            logger.error(f"[AI Agent] Could not download logs for job {failed_job.get('name')} to perform analysis.")
-                    else:
-                        logger.warning(f"[AI Agent] Could not identify which specific job failed in the run.")
                 
-                # Link to the actions tab natively (if it was success, we still link it here, but we already linked it early for failure)
                 if conclusion == "success":
                     logger.info(f"🔗 View Full Logs: https://github.com/{owner}/{repo}/actions/runs/{run_id}")
                 break
                 
-            # Poll every 4 seconds
             await asyncio.sleep(4)
 
 github_actions_service = GitHubActionsService()

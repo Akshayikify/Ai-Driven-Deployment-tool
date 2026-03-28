@@ -96,9 +96,62 @@ class AnalysisEngine:
                 "detected_files": [],
                 "dependencies": []
             })
+        
+        # 6. Predict Deployment Time
+        findings["estimated_duration"] = self._predict_deployment_time(findings)
 
-        logger.info(f"Deep analysis complete. Detected {len(findings['services'])} services and {len(findings['databases'])} databases.")
+        logger.info(f"Deep analysis complete. Detected {len(findings['services'])} services and {len(findings['databases'])} databases. Estimated deployment: {findings['estimated_duration']}")
         return findings
+
+    def _predict_deployment_time(self, findings: Dict[str, Any]) -> str:
+        """
+        AI estimation of how long the deployment will take in seconds based on project complexity.
+        """
+        total_seconds = 45 # Baseline for cloning & analysis
+        
+        # 1. Framework Base Times (Seconds)
+        base_times = {
+            "Java": 240,
+            "Maven / Spring Boot": 300,
+            "JavaScript/TypeScript": 120,
+            "Next.js": 180,
+            "React": 150,
+            "Python": 90,
+            "FastAPI": 100,
+            "Django": 150,
+            "PHP": 80,
+            "Go": 60,
+            "Unknown": 120
+        }
+        
+        # 2. Add complexity for each service
+        for service in findings.get("services", []):
+            lang = service.get("language", "Unknown")
+            framework = service.get("framework", "Unknown")
+            
+            # Use framework time if specifically known, else language, else generic
+            service_base = base_times.get(framework, base_times.get(lang, 120))
+            
+            # Add multiplier for dependency count
+            dep_count = len(service.get("dependencies", []))
+            dep_penalty = min(dep_count * 2, 60) # Up to 1 min extra for many deps
+            
+            total_seconds += service_base + dep_penalty
+            
+        # 3. Add penalty for databases (infrastructure setup)
+        total_seconds += len(findings.get("databases", [])) * 40
+        
+        # 4. Multi-service coordination penalty
+        if len(findings.get("services", [])) > 1:
+            total_seconds += 30 
+            
+        # Format as M:SS
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        
+        if minutes == 0:
+            return f"{seconds}s"
+        return f"{minutes}m {seconds}s"
 
     def _identify_service_roots(self, file_index: dict) -> list:
         """Finds directories that likely represent the root of a service."""
