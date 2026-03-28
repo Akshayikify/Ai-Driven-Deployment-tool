@@ -75,6 +75,10 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
     t0 = time.time()
     findings = analysis_engine.analyze_directory(workspace)
     
+    # Store estimated duration in task manager
+    if "estimated_duration" in findings:
+        task_manager.update_task(task_id, "analyzing", estimated_duration=findings["estimated_duration"])
+
     # AI Refinement if confidence is low
     if findings.get("confidence", 0) < 0.7:
         logger.info(f"Task {task_id}: Low confidence ({findings.get('confidence')}). Requesting AI refinement...")
@@ -117,9 +121,9 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
         # We spawn this as a background asyncio task so it doesn't block the HTTP response or Task Manager
         import asyncio
         from app.services.github_actions import github_actions_service
-        asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token))
-        
-    task_manager.update_task(task_id, "completed")
+        asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id))
+    else:    
+        task_manager.update_task(task_id, "completed")
 
 @router.post("/analyze")
 async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTasks):
@@ -127,7 +131,7 @@ async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTa
     logger.info(f"Received analysis request for {request.repo_url}. Assigned ID: {task_id}")
     
     # Initialize task status
-    task_manager.update_task(task_id, "initialized")
+    task_manager.update_task(task_id, "initialized", repo_url=request.repo_url)
     
     background_tasks.add_task(analyze_repo_task, task_id, request.repo_url, request.branch, request.user_id)
     
@@ -143,6 +147,11 @@ async def get_task_status(task_id: str):
     if not status:
         raise HTTPException(status_code=404, detail="Task not found")
     return status
+
+@router.get("/tasks")
+async def list_recent_tasks():
+    """Returns a list of all recent deployment tasks."""
+    return task_manager.list_tasks()
 
 class AutoFixRequest(BaseModel):
     repo_url: str

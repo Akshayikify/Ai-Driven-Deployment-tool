@@ -15,6 +15,7 @@ interface DeploymentContextType {
     setRepoUrl: (url: string | null) => void;
     steps: TimelineStep[];
     currentMessage: string;
+    estimatedDuration: string | null;
 }
 
 const defaultSteps: TimelineStep[] = [
@@ -57,6 +58,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     const [repoUrl, setRepoUrl] = useState<string | null>(null);
     const [steps, setSteps] = useState<TimelineStep[]>(defaultSteps);
     const [currentMessage, setCurrentMessage] = useState<string>("Ready for deployment");
+    const [estimatedDuration, setEstimatedDuration] = useState<string | null>(null);
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
@@ -69,10 +71,12 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
                         const data = await response.json();
                         setSteps(data.steps);
                         setCurrentMessage(data.current_message);
+                        if (data.estimated_duration) {
+                            setEstimatedDuration(data.estimated_duration);
+                        }
 
                         // Stop polling if the task is in a terminal state
-                        if (data.current_message.toLowerCase().includes("complete") ||
-                            data.current_message.toLowerCase().includes("failed")) {
+                        if (data.status === "success" || data.status === "failed") {
                             if (intervalId) clearInterval(intervalId);
                         }
                     }
@@ -81,12 +85,13 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
                 }
             };
 
-            // Poll every 2 seconds
+            // Poll every 10 seconds
             pollStatus();
-            intervalId = setInterval(pollStatus, 2000);
+            intervalId = setInterval(pollStatus, 10000);
         } else {
             setSteps(defaultSteps);
             setCurrentMessage("Ready for deployment");
+            setEstimatedDuration(null);
         }
 
         return () => {
@@ -95,7 +100,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     }, [activeTaskId]);
 
     return (
-        <DeploymentContext.Provider value={{ activeTaskId, setActiveTaskId, repoUrl, setRepoUrl, steps, currentMessage }}>
+        <DeploymentContext.Provider value={{ activeTaskId, setActiveTaskId, repoUrl, setRepoUrl, steps, currentMessage, estimatedDuration }}>
             {children}
         </DeploymentContext.Provider>
     );

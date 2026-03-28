@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -9,67 +9,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface Deployment {
   id: string;
-  name: string;
+  repo_url: string;
   status: "success" | "failed" | "pending" | "running";
-  timestamp: string;
+  created_at: string;
   duration: string;
   commit: string;
   environment: string;
+  current_message?: string;
 }
 
-const mockDeployments: Deployment[] = [
-  {
-    id: "1",
-    name: "frontend-v2.1.0",
-    status: "success",
-    timestamp: "2024-01-15 14:30:00",
-    duration: "2m 34s",
-    commit: "a1b2c3d",
-    environment: "production",
-  },
-  {
-    id: "2",
-    name: "api-hotfix-urgent",
-    status: "failed",
-    timestamp: "2024-01-15 12:15:00",
-    duration: "1m 12s",
-    commit: "e4f5g6h",
-    environment: "staging",
-  },
-  {
-    id: "3",
-    name: "backend-v1.8.2",
-    status: "running",
-    timestamp: "2024-01-15 10:45:00",
-    duration: "45s",
-    commit: "i7j8k9l",
-    environment: "production",
-  },
-  {
-    id: "4",
-    name: "mobile-app-v3.0.0",
-    status: "pending",
-    timestamp: "2024-01-15 09:20:00",
-    duration: "-",
-    commit: "m0n1o2p",
-    environment: "development",
-  },
-  {
-    id: "5",
-    name: "docs-update",
-    status: "success",
-    timestamp: "2024-01-14 16:00:00",
-    duration: "1m 8s",
-    commit: "q3r4s5t",
-    environment: "production",
-  },
-];
-
-const getStatusConfig = (status: Deployment["status"]) => {
+const getStatusConfig = (status: string) => {
   switch (status) {
     case "success":
       return {
@@ -90,6 +44,7 @@ const getStatusConfig = (status: Deployment["status"]) => {
         className: "bg-blue-500/20 text-blue-400 border-blue-500/30",
       };
     case "pending":
+    default:
       return {
         icon: AlertCircle,
         label: "Pending",
@@ -98,17 +53,73 @@ const getStatusConfig = (status: Deployment["status"]) => {
   }
 };
 
+const getRepoName = (url: string) => {
+  if (!url) return "Unknown";
+  const cleanUrl = url.replace(".git", "");
+  const parts = cleanUrl.split("/");
+  return parts[parts.length - 1] || url;
+};
+
 interface DeploymentsTableProps {
   className?: string;
 }
 
 export default function DeploymentsTable({ className }: DeploymentsTableProps) {
+  const [deployments, setDeployments] = useState<Deployment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDeployments = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/v1/analyze/tasks");
+      if (response.ok) {
+        const data = await response.json();
+        setDeployments(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch deployments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeployments();
+    
+    // Poll for updates intelligently
+    // Every 60 seconds if everything is finished, every 10 seconds if something is running
+    const hasActiveTasks = deployments.some(d => d.status === "running" || d.status === "pending");
+    const intervalTime = hasActiveTasks ? 10000 : 60000;
+    
+    const interval = setInterval(fetchDeployments, intervalTime);
+    return () => clearInterval(interval);
+  }, [deployments.length, deployments.some(d => d.status === "running" || d.status === "pending")]);
+
+  if (loading && deployments.length === 0) {
+    return (
+      <Card className="bg-slate-800/50 border-slate-700 p-8 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <RefreshCw className="w-8 h-8 text-neon-cyan animate-spin" />
+          <p className="text-slate-400 text-sm">Loading deployments...</p>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className="bg-slate-800/50 border-slate-700">
       <div className="p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">
-          Recent Deployments
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">
+            Recent Deployments
+          </h3>
+          <button 
+            onClick={fetchDeployments}
+            className="p-2 hover:bg-slate-700 rounded-full transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className={`w-4 h-4 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
 
         <div className="overflow-x-auto">
           <Table>
@@ -123,47 +134,66 @@ export default function DeploymentsTable({ className }: DeploymentsTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockDeployments.map((deployment) => {
-                const statusConfig = getStatusConfig(deployment.status);
-                const StatusIcon = statusConfig.icon;
+              {deployments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                    No recent deployments found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                deployments.map((deployment) => {
+                  const statusConfig = getStatusConfig(deployment.status);
+                  const StatusIcon = statusConfig.icon;
 
-                return (
-                  <TableRow
-                    key={deployment.id}
-                    className="border-slate-700 hover:bg-slate-800/30"
-                  >
-                    <TableCell className="text-white font-medium">
-                      {deployment.name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <StatusIcon className="w-4 h-4" />
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.className}`}
-                        >
-                          {statusConfig.label}
+                  return (
+                    <TableRow
+                      key={deployment.id}
+                      className="border-slate-700 hover:bg-slate-800/30"
+                    >
+                      <TableCell className="text-white font-medium">
+                        <div className="flex flex-col">
+                          <span>{getRepoName(deployment.repo_url)}</span>
+                          {deployment.current_message && (
+                            <span className="text-[10px] text-slate-400 font-normal truncate max-w-[200px]">
+                              {deployment.current_message}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <StatusIcon className="w-4 h-4" />
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${statusConfig.className}`}
+                          >
+                            {statusConfig.label}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-slate-300 text-sm">
+                          {deployment.environment}
                         </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-slate-300 text-sm">
-                        {deployment.environment}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-slate-300 text-sm">
-                      {deployment.duration}
-                    </TableCell>
-                    <TableCell>
-                      <code className="text-xs text-slate-400 bg-slate-900/50 px-2 py-1 rounded">
-                        {deployment.commit}
-                      </code>
-                    </TableCell>
-                    <TableCell className="text-slate-400 text-sm">
-                      {deployment.timestamp}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                      </TableCell>
+                      <TableCell className="text-slate-300 text-sm">
+                        {deployment.duration}
+                      </TableCell>
+                      <TableCell>
+                        {deployment.commit !== "N/A" ? (
+                           <code className="text-[10px] text-slate-400 bg-slate-900/50 px-2 py-1 rounded">
+                             {deployment.commit}
+                           </code>
+                        ) : (
+                          <span className="text-slate-500 text-xs">N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-slate-400 text-sm">
+                        {deployment.created_at ? formatDistanceToNow(new Date(deployment.created_at), { addSuffix: true }) : "-"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </div>
