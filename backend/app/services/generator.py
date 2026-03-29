@@ -1,7 +1,8 @@
-from loguru import logger
+import json
 import os
-from typing import Dict, Any, Optional
 import inspect
+from loguru import logger
+from typing import Dict, Any, Optional
 
 from .docker_templates.python_template import PythonDockerTemplate
 from .docker_templates.node_template import NodeDockerTemplate
@@ -104,7 +105,6 @@ class FileGenerator:
             path = service.get("path", ".")
             
             # Simple Port Mapping Heuristic
-            # Backend usually 8000 (Python/Go/FastAPI), Java usually 8080, Frontend 3000 (React/Next)
             is_frontend = any(kw in (name.lower() or "") for kw in ["frontend", "client", "web"])
             is_frontend = is_frontend or service.get("framework") in ["React", "Next.js", "Vue"]
             is_java = service.get("language") == "Java"
@@ -130,7 +130,6 @@ class FileGenerator:
                 "restart": "unless-stopped"
             }
 
-            # Inject database dependency if detected
             if findings.get("databases"):
                 services_config[name]["depends_on"] = [db.lower().replace("/", "-") for db in findings["databases"]]
 
@@ -196,7 +195,6 @@ class FileGenerator:
     def generate_dockerignore(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
         """
         Generates a .dockerignore file.
-        'findings' refers to a specific service.
         """
         ignore_path = os.path.join(workspace_path, ".dockerignore")
         if os.path.exists(ignore_path):
@@ -216,8 +214,8 @@ class FileGenerator:
 
     def generate_cicd_workflow(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
         """
-        Generates a GitHub Actions CI/CD workflow based on project detected language using the template strategy.
-        'findings' can be global or root service.
+        Generates a GitHub Actions CI/CD workflow that supports both single-service 
+        and parallel multi-service builds (Monorepo support).
         """
         github_dir = os.path.join(workspace_path, ".github", "workflows")
         os.makedirs(github_dir, exist_ok=True)
@@ -226,13 +224,17 @@ class FileGenerator:
         if os.path.exists(workflow_path):
             return False
 
-        # In multi-service context, findings might be global. Take first service for workflow template.
-        primary_findings = findings
-        if findings.get("services"):
-            primary_findings = findings["services"][0]
+        services = findings.get("services", [])
+        if not services:
+            return False
 
-        strategy = self._get_strategy(primary_findings)
-        content = strategy.generate_cicd_workflow(primary_findings)
+        # If it's a monorepo, we generate a high-performance parallel matrix workflow
+        if len(services) > 1:
+            content = self._generate_matrix_workflow(findings)
+        else:
+            # For single service, use the language-specific strategy
+            strategy = self._get_strategy(services[0])
+            content = strategy.generate_cicd_workflow(services[0])
 
         try:
             with open(workflow_path, "w") as f:
@@ -243,10 +245,74 @@ class FileGenerator:
             logger.error(f"Failed to generate CI/CD workflow at {workflow_path}: {e}")
             return False
 
+    def _generate_matrix_workflow(self, findings: Dict[str, Any]) -> str:
+        """Generates a high-performance GitHub Actions workflow with matrix strategy."""
+        services = findings.get("services", [])
+        # Create a clean list of service definitions for the matrix
+        matrix_services = []
+        for s in services:
+            matrix_services.append({
+                "name": s.get("name"),
+                "path": s.get("path", ".")
+            })
+        
+        return f"""name: High-Speed Parallel Deployment
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{{{ github.workflow }}}}-${{{{ github.ref }}}}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: {json.dumps(matrix_services)}
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{{{ github.actor }}}}
+          password: ${{{{ secrets.GITHUB_TOKEN }}}}
+
+      - name: Lowercase repository name
+        run: |
+          echo "REPO_NAME=$(echo ${{{{ github.repository }}}} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "SERVICE_NAME=$(echo ${{{{ matrix.service.name }}}} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Build and push Service Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./${{{{ matrix.service.path }}}}/Dockerfile
+          push: ${{{{ github.event_name != 'pull_request' }}}}
+          tags: ghcr.io/${{{{ env.REPO_NAME }}}}/${{{{ env.SERVICE_NAME }}}}:latest
+          cache-from: type=gha,scope=${{{{ matrix.service.name }}}}
+          cache-to: type=gha,mode=max,scope=${{{{ matrix.service.name }}}}
+"""
+
     def generate_env_file(self, workspace_path: str, findings: Dict[str, Any]) -> bool:
         """
         Generates an environment template if env variables were found.
-        Collects from all services.
         """
         env_vars = set(findings.get("env_vars", []))
         for s in findings.get("services", []):
@@ -254,7 +320,6 @@ class FileGenerator:
                 env_vars.add(v)
                 
         if not env_vars:
-            # If databases detected, add common env vars
             if findings.get("databases"):
                 env_vars.update(["DATABASE_URL", "DB_HOST", "DB_USER", "DB_PASS"])
             else:
@@ -273,6 +338,5 @@ class FileGenerator:
         except Exception as e:
             logger.error(f"Failed to generate .env.example at {env_path}: {e}")
             return False
-
 
 file_generator = FileGenerator()

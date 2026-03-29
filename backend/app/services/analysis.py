@@ -106,8 +106,9 @@ class AnalysisEngine:
     def _predict_deployment_time(self, findings: Dict[str, Any]) -> str:
         """
         AI estimation of how long the deployment will take in seconds based on project complexity.
+        Optimized for Parallel Matrix Builds.
         """
-        total_seconds = 45 # Baseline for cloning & analysis
+        cloning_analysis_base = 45 # Baseline for cloning & analysis
         
         # 1. Framework Base Times (Seconds)
         base_times = {
@@ -124,26 +125,30 @@ class AnalysisEngine:
             "Unknown": 120
         }
         
-        # 2. Add complexity for each service
+        service_durations = []
         for service in findings.get("services", []):
             lang = service.get("language", "Unknown")
             framework = service.get("framework", "Unknown")
             
-            # Use framework time if specifically known, else language, else generic
             service_base = base_times.get(framework, base_times.get(lang, 120))
-            
-            # Add multiplier for dependency count
             dep_count = len(service.get("dependencies", []))
-            dep_penalty = min(dep_count * 2, 60) # Up to 1 min extra for many deps
+            dep_penalty = min(dep_count * 2, 60)
             
-            total_seconds += service_base + dep_penalty
+            service_durations.append(service_base + dep_penalty)
             
-        # 3. Add penalty for databases (infrastructure setup)
-        total_seconds += len(findings.get("databases", [])) * 40
+        # 2. Parallel vs Sequential logic
+        if not service_durations:
+            build_time = 120
+        elif len(service_durations) > 1:
+            # Parallel Matrix Build: Use the longest service + a small overhead
+            build_time = max(service_durations) + 30
+        else:
+            build_time = service_durations[0]
+
+        # 3. Add penalty for databases
+        db_penalty = len(findings.get("databases", [])) * 40
         
-        # 4. Multi-service coordination penalty
-        if len(findings.get("services", [])) > 1:
-            total_seconds += 30 
+        total_seconds = cloning_analysis_base + build_time + db_penalty
             
         # Format as M:SS
         minutes = total_seconds // 60
