@@ -59,71 +59,83 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
     
     import time
     
-    # 1. Clone
-    task_manager.update_task(task_id, "cloning")
-    t0 = time.time()
-    workspace = repo_service.clone_repository(repo_url, branch, token=github_token)
-    t_clone = time.time() - t0
-    
-    if not workspace:
-        logger.error(f"Task {task_id}: Cloning failed.")
-        task_manager.update_task(task_id, "failed", message="Cloning failed.")
-        return
-
-    # 2. Analyze
-    task_manager.update_task(task_id, "analyzing")
-    t0 = time.time()
-    findings = analysis_engine.analyze_directory(workspace)
-    
-    # Store estimated duration in task manager
-    if "estimated_duration" in findings:
-        task_manager.update_task(task_id, "analyzing", estimated_duration=findings["estimated_duration"])
-
-    # AI Refinement if confidence is low
-    if findings.get("confidence", 0) < 0.7:
-        logger.info(f"Task {task_id}: Low confidence ({findings.get('confidence')}). Requesting AI refinement...")
-        findings = await ai_service.refine_analysis(findings)
-    t_analyze = time.time() - t0
-    
-    # 3. Generate Deployment Files
-    task_manager.update_task(task_id, "generating")
-    t0 = time.time()
-    await file_generator.generate_deployment_files(workspace, findings)
-    t_generate = time.time() - t0
-
-    # 4. Push changes if token provided
-    t_push = 0
-    if github_token:
-        task_manager.update_task(task_id, "pushing")
-        logger.info(f"Task {task_id}: Attempting to push changes...")
+    try:
+        # 1. Clone
+        task_manager.update_task(task_id, "cloning")
         t0 = time.time()
-        repo_service.push_changes(workspace)
-        t_push = time.time() - t0
+        workspace = repo_service.clone_repository(repo_url, branch, token=github_token)
+        t_clone = time.time() - t0
+        
+        if not workspace:
+            logger.error(f"Task {task_id}: Cloning failed.")
+            task_manager.update_task(task_id, "failed", message="Cloning failed.")
+            return
 
-    # 5. Cleanup
-    repo_service.cleanup_workspace(workspace)
-    
-    # Log Timing Summary
-    summary_msg = (
-        f"⏱️ Deployment Preparation Time Summary:\n"
-        f"  - Repository Cloning: {t_clone:.2f}s\n"
-        f"  - Deep AI Analysis: {t_analyze:.2f}s\n"
-        f"  - Asset Generation: {t_generate:.2f}s\n"
-    )
-    if github_token:
-         summary_msg += f"  - Remote GitHub Push: {t_push:.2f}s\n"
-    
-    summary_msg += f"  => Total Time Saved: {(t_clone + t_analyze + t_generate + t_push):.2f}s vs Manual Deployment"
-    logger.info(summary_msg)
-    
-    # 6. Trigger Live GitHub Actions Monitoring
-    if github_token:
-        # We spawn this as a background asyncio task so it doesn't block the HTTP response or Task Manager
-        import asyncio
-        from app.services.github_actions import github_actions_service
-        asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id))
-    else:    
-        task_manager.update_task(task_id, "completed")
+        # 2. Analyze
+        task_manager.update_task(task_id, "analyzing")
+        t0 = time.time()
+        findings = analysis_engine.analyze_directory(workspace)
+        
+        # Store estimated duration in task manager
+        if "estimated_duration" in findings:
+            task_manager.update_task(task_id, "analyzing", estimated_duration=findings["estimated_duration"])
+
+        # AI Refinement if confidence is low
+        if findings.get("confidence", 0) < 0.7:
+            logger.info(f"Task {task_id}: Low confidence ({findings.get('confidence')}). Requesting AI refinement...")
+            findings = await ai_service.refine_analysis(findings)
+        t_analyze = time.time() - t0
+        
+        # 3. Generate Deployment Files
+        task_manager.update_task(task_id, "generating")
+        t0 = time.time()
+        await file_generator.generate_deployment_files(workspace, findings)
+        t_generate = time.time() - t0
+
+        # 4. Push changes if token provided
+        t_push = 0
+        if github_token:
+            task_manager.update_task(task_id, "pushing")
+            logger.info(f"Task {task_id}: Attempting to push changes...")
+            t0 = time.time()
+            repo_service.push_changes(workspace)
+            t_push = time.time() - t0
+
+        # 5. Cleanup
+        repo_service.cleanup_workspace(workspace)
+        
+        # Log Timing Summary
+        summary_msg = (
+            f"⏱️ Deployment Preparation Time Summary:\n"
+            f"  - Repository Cloning: {t_clone:.2f}s\n"
+            f"  - Deep AI Analysis: {t_analyze:.2f}s\n"
+            f"  - Asset Generation: {t_generate:.2f}s\n"
+        )
+        if github_token:
+             summary_msg += f"  - Remote GitHub Push: {t_push:.2f}s\n"
+        
+        summary_msg += f"  => Total Time Saved: {(t_clone + t_analyze + t_generate + t_push):.2f}s vs Manual Deployment"
+        logger.info(summary_msg)
+        
+        # 6. Trigger Live GitHub Actions Monitoring
+        if github_token:
+            # We spawn this as a background asyncio task so it doesn't block the HTTP response or Task Manager
+            import asyncio
+            from app.services.github_actions import github_actions_service
+            asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id))
+        else:    
+            task_manager.update_task(task_id, "completed")
+    except Exception as e:
+        import traceback
+        logger.error(f"Task {task_id} failed with exception: {e}")
+        logger.error(traceback.format_exc())
+        task_manager.update_task(task_id, "failed", message=str(e))
+        # Ensure cleanup on failure
+        try:
+            if 'workspace' in locals() and workspace:
+                repo_service.cleanup_workspace(workspace)
+        except:
+            pass
 
 @router.post("/analyze")
 async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTasks):
