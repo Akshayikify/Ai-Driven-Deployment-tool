@@ -302,7 +302,7 @@ jobs:
       - name: Build and push Service Image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./${{{{ matrix.service.path }}}}
           file: ./${{{{ matrix.service.path }}}}/Dockerfile
           push: ${{{{ github.event_name != 'pull_request' }}}}
           tags: ghcr.io/${{{{ env.REPO_NAME }}}}/${{{{ env.SERVICE_NAME }}}}:latest

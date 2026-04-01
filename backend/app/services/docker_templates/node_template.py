@@ -133,8 +133,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./{workdir}
+          file: ./{workdir}/Dockerfile
           push: ${{{{ github.event_name != 'pull_request' }}}}
           tags: ${{{{ steps.meta.outputs.tags }}}}
           labels: ${{{{ steps.meta.outputs.labels }}}}
