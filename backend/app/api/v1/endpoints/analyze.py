@@ -165,6 +165,12 @@ async def list_recent_tasks():
     """Returns a list of all recent deployment tasks."""
     return task_manager.list_tasks()
 
+@router.get("/stats")
+async def get_deployment_analytics():
+    """Retrieves deployment statistics from MongoDB for the analytics dashboard."""
+    from app.db.mongodb import db
+    return await db.get_deployment_stats()
+
 class AutoFixRequest(BaseModel):
     repo_url: str
     user_id: str

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import DeploymentStepper from "@/components/DeploymentStepper";
-import FileUploader from "@/components/FileUploader";
 import DeploymentsTable from "@/components/DeploymentsTable";
 import ProgressTimeline from "@/components/ProgressTimeline";
 import LogMonitoringCard from "@/components/LogMonitoringCard";
 import AIAgent from "@/components/AIAgent";
+import DeploymentAnalytics from "@/components/DeploymentAnalytics";
 import { Card } from "@/components/ui/card";
-import { Activity, Upload, Clock, Server } from "lucide-react";
+import { Activity, Clock, Server } from "lucide-react";
 
 import { useDeployment } from "@/context/DeploymentContext";
 
@@ -28,14 +27,6 @@ export default function Dashboard() {
         setLoading(false);
       });
   }, []);
-
-  const handleFileSelect = (files: FileList) => {
-    console.log("Files selected:", files);
-  };
-
-  const handleContinue = () => {
-    console.log("Continue to next step");
-  };
 
   return (
     <DashboardLayout>
@@ -69,36 +60,33 @@ export default function Dashboard() {
             {/* Log Monitoring - 75% */}
             <LogMonitoringCard className="lg:col-span-3 h-[500px]" />
 
-          {/* Deployment Status - 25% */}
-          <Card className="lg:col-span-1 bg-slate-800/50 border-slate-700 p-4 sm:p-6 flex flex-col h-[500px]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
-                <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Status</h3>
-              </div>
-              {estimatedDuration && (
-                <div className="flex flex-col items-end">
-                   <span className="text-[10px] text-slate-500 uppercase tracking-wider">Est. Time</span>
-                   <span className="text-xs font-mono text-neon-cyan">{estimatedDuration}</span>
+            {/* Deployment Status - 25% */}
+            <Card className="lg:col-span-1 bg-slate-800/50 border-slate-700 p-4 sm:p-6 flex flex-col h-[500px]">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
+                  <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Status</h3>
                 </div>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <ProgressTimeline steps={steps} />
-            </div>
-          </Card>
+                {estimatedDuration && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">Est. Time</span>
+                    <span className="text-xs font-mono text-neon-cyan">{estimatedDuration}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <ProgressTimeline steps={steps} />
+              </div>
+            </Card>
           </div>
 
-          {/* 3. Recent Deployments - Full Width */}
-          <Card className="bg-slate-800/50 border-slate-700 p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Server className="w-5 h-5 text-neon-cyan flex-shrink-0" />
-              <h3 className="text-base sm:text-lg font-semibold text-white">Recent Deployments</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <DeploymentsTable />
-            </div>
-          </Card>
+          {/* 3. Recent Deployments Table */}
+          <div className="space-y-6">
+            <DeploymentsTable />
+            
+            {/* 4. Deployment Analytics (Synced with MongoDB) */}
+            <DeploymentAnalytics />
+          </div>
         </div>
       </div>
     </DashboardLayout>

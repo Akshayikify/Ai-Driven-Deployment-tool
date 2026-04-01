@@ -1,6 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from loguru import logger
 from app.core.config import settings
+import datetime
 
 class MongoDB:
     client: AsyncIOMotorClient = None
@@ -32,19 +33,61 @@ class MongoDB:
             return False
 
     async def store_user_data(self, user_data: dict):
-        if not self.db:
+        if self.db is None:
             await self.connect_to_mongo()
         
         try:
             result = await self.db.users.update_one(
-                {"email": user_data["email"]},
-                {"$set": {**user_data, "updated_at": "2026-03-25"}},
+                {"clerk_id": user_data.get("clerk_id")},
+                {"$set": {**user_data, "updated_at": datetime.datetime.now()}},
                 upsert=True
             )
-            return str(result.upserted_id if result.upserted_id else "modified")
+            return True
         except Exception as e:
             logger.error(f"Error storing user data: {e}")
-            raise e
+            return False
+
+    async def store_deployment_data(self, deployment_data: dict):
+        if self.db is None:
+            await self.connect_to_mongo()
+        
+        try:
+            # Upsert by ID to avoid duplicates
+            # Copy dict so we don't modify the original (e.g. converting datetime to string)
+            data = deployment_data.copy()
+            # Clean up non-serializable objects (like datetime)
+            if "start_time" in data and isinstance(data["start_time"], datetime.datetime):
+                data["start_time"] = data["start_time"].isoformat()
+
+            result = await self.db.deployments.update_one(
+                {"id": data["id"]},
+                {"$set": {**data, "updated_at": datetime.datetime.now()}},
+                upsert=True
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error storing deployment data: {e}")
+            return False
+
+    async def get_deployment_stats(self) -> dict:
+        if self.db is None:
+            await self.connect_to_mongo()
+            
+        try:
+            success = await self.db.deployments.count_documents({"status": "success"})
+            failed = await self.db.deployments.count_documents({"status": "failed"})
+            running = await self.db.deployments.count_documents({"status": "running"})
+            total = await self.db.deployments.count_documents({})
+            
+            return {
+                "success": success,
+                "failed": failed,
+                "running": running,
+                "total": total
+            }
+        except Exception as e:
+            logger.error(f"Error getting deployment stats: {e}")
+            return {"success": 0, "failed": 0, "running": 0, "total": 0}
 
 db = MongoDB()
 

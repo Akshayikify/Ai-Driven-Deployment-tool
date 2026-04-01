@@ -99,6 +99,16 @@ class TaskManager:
             
         task["updated_at"] = datetime.datetime.now().isoformat()
         logger.debug(f"Task {task_id} updated to {status}")
+        
+        # Async sync to MongoDB for analytics and history
+        import asyncio
+        from app.db.mongodb import db
+        try:
+            # We use try/except and create_task to not block the main logic 
+            # and handle cases where DB might not be connected yet
+            asyncio.create_task(db.store_deployment_data(task))
+        except Exception as e:
+            logger.warning(f"Failed to trigger MongoDB sync for task {task_id}: {e}")
 
     def _update_step(self, task: dict, step_id: str, status: str):
         for step in task["steps"]:
