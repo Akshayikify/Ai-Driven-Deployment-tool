@@ -22,7 +22,10 @@ class DockerTemplate(ABC):
 
     def generate_cicd_workflow(self, findings: Dict[str, Any]) -> str:
         """Generates the .github/workflows/deploy.yml CI/CD pipeline content."""
-        return """name: Generic Docker CI/CD
+        workdir = findings.get("path", ".")
+        clean_workdir = workdir.strip("./")
+        
+        return f"""name: Generic Docker CI/CD
 
 on:
   push:
@@ -47,25 +50,26 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{{{ github.actor }}}}
+          password: ${{{{ secrets.GITHUB_TOKEN }}}}
 
       - name: Lowercase repository name
-        run: echo "IMAGE_ID=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        run: echo "IMAGE_ID=$(echo ${{{{ github.repository }}}} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ env.IMAGE_ID }}
+          images: ghcr.io/${{{{ env.IMAGE_ID }}}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          context: ./{clean_workdir}
+          file: ./{clean_workdir}/Dockerfile
+          push: ${{{{ github.event_name != 'pull_request' }}}}
+          tags: ${{{{ steps.meta.outputs.tags }}}}
+          labels: ${{{{ steps.meta.outputs.labels }}}}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 """

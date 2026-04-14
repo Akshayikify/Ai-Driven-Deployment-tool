@@ -8,6 +8,9 @@ from .docker_templates.python_template import PythonDockerTemplate
 from .docker_templates.node_template import NodeDockerTemplate
 from .docker_templates.php_template import PHPDockerTemplate
 from .docker_templates.java_template import JavaDockerTemplate
+from .docker_templates.ruby_template import RubyDockerTemplate
+from .docker_templates.rust_template import RustDockerTemplate
+from .docker_templates.go_template import GoDockerTemplate
 from .docker_templates.llm_template import LLMDockerTemplate
 
 class FileGenerator:
@@ -16,7 +19,10 @@ class FileGenerator:
             "Python": PythonDockerTemplate(),
             "JavaScript/TypeScript": NodeDockerTemplate(),
             "PHP": PHPDockerTemplate(),
-            "Java": JavaDockerTemplate()
+            "Java": JavaDockerTemplate(),
+            "Ruby": RubyDockerTemplate(),
+            "Rust": RustDockerTemplate(),
+            "Go": GoDockerTemplate()
         }
 
     def _get_strategy(self, findings: Dict[str, Any]):

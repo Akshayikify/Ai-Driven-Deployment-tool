@@ -14,6 +14,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { Activity, CheckCircle, XCircle, Clock, TrendingUp } from "lucide-react";
+import { useAuth } from "@clerk/clerk-react";
 
 interface Stats {
   success: number;
@@ -23,12 +24,14 @@ interface Stats {
 }
 
 export default function DeploymentAnalytics() {
+  const { userId } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
+    if (!userId) return;
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/v1/analyze/stats");
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/analyze/stats?user_id=${userId}`);
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -44,7 +47,7 @@ export default function DeploymentAnalytics() {
     fetchStats();
     const interval = setInterval(fetchStats, 30000); // Poll every 30s
     return () => clearInterval(interval);
-  }, []);
+  }, [userId]);
 
   if (loading && !stats) {
     return (
