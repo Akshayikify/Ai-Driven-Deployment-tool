@@ -7,7 +7,7 @@ class TaskManager:
         # In-memory store for now. In production, use Redis or Database.
         self.tasks: Dict[str, Any] = {}
 
-    def update_task(self, task_id: str, status: str, message: str = "", **kwargs):
+    def update_task(self, task_id: str, status: str, message: str = "", user_id: Optional[str] = None, **kwargs):
         """
         Updates the status of a specific task.
         Status options: 'cloning', 'analyzing', 'generating', 'pushing', 'building', 'deploying', 'completed', 'failed'
@@ -15,6 +15,7 @@ class TaskManager:
         if task_id not in self.tasks:
             self.tasks[task_id] = {
                 "id": task_id,
+                "user_id": user_id,
                 "created_at": datetime.datetime.now().isoformat(),
                 "start_time": datetime.datetime.now(),
                 "repo_url": kwargs.get("repo_url", "Unknown"),
@@ -34,6 +35,10 @@ class TaskManager:
         
         task = self.tasks[task_id]
         
+        # If user_id was provided later, update it (though it should be provided at creation)
+        if user_id:
+            task["user_id"] = user_id
+            
         # Update extra fields if provided
         for key, value in kwargs.items():
             task[key] = value
@@ -124,7 +129,10 @@ class TaskManager:
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         return self.tasks.get(task_id)
 
-    def list_tasks(self) -> list:
-        return sorted(self.tasks.values(), key=lambda x: x.get("created_at", ""), reverse=True)
+    def list_tasks(self, user_id: Optional[str] = None) -> list:
+        all_tasks = self.tasks.values()
+        if user_id:
+            all_tasks = [t for t in all_tasks if t.get("user_id") == user_id]
+        return sorted(all_tasks, key=lambda x: x.get("created_at", ""), reverse=True)
 
 task_manager = TaskManager()

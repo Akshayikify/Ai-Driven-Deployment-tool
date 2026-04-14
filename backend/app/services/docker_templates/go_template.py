@@ -1,31 +1,67 @@
-from abc import ABC, abstractmethod
+from .base import DockerTemplate
 from typing import Dict, Any
+import os
 
-class DockerTemplate(ABC):
-    @abstractmethod
+class GoDockerTemplate(DockerTemplate):
     def generate_dockerfile(self, findings: Dict[str, Any]) -> str:
-        """Generates the Dockerfile content."""
-        pass
+        """
+        Generates an optimized multi-stage Dockerfile for Go projects.
+        Uses a lightweight alpine image for the final runtime.
+        """
+        entry_point = findings.get("entry_point", "main.go")
+        # Extract binary name from project name or entry point
+        name = findings.get("name", "app").lower()
+        
+        return f"""# Build Stage
+FROM golang:1.21-alpine AS builder
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Handle modules
+COPY go.mod go.sum* ./
+RUN go mod download
+
+# Build the application
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server {entry_point}
+
+# Final Stage
+FROM alpine:latest
+WORKDIR /app
+RUN apk add --no-cache ca-certificates tzdata
+
+# Copy binary from builder
+COPY --from=builder /app/server ./server
+
+# Create non-root user
+RUN adduser -D -g '' appuser
+USER appuser
+
+EXPOSE 8080
+CMD ["./server"]
+"""
 
     def generate_dockerignore(self, findings: Dict[str, Any]) -> str:
-        """Generates the .dockerignore content."""
-        return (
-            ".git\n"
-            "__pycache__\n"
-            "node_modules\n"
-            ".env\n"
-            "*.pyc\n"
-            ".pytest_cache\n"
-            "dist\n"
-            "build\n"
-        )
+        return """
+.git
+.github
+vendor/
+bin/
+*.exe
+*.test
+*.out
+Dockerfile
+.dockerignore
+"""
 
     def generate_cicd_workflow(self, findings: Dict[str, Any]) -> str:
-        """Generates the .github/workflows/deploy.yml CI/CD pipeline content."""
+        """Generates a Go-specific CI/CD pipeline."""
         workdir = findings.get("path", ".")
         clean_workdir = workdir.strip("./")
         
-        return f"""name: Generic Docker CI/CD
+        return f"""name: Go CI/CD Pipeline
 
 on:
   push:
@@ -34,7 +70,24 @@ on:
     branches: [ "main" ]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Run tests
+        working-directory: ./{clean_workdir}
+        run: go test -v ./...
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

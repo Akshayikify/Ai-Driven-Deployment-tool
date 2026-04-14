@@ -30,7 +30,8 @@ Ai-Driven-Deployment-tool/
 
 ## 3. Core Features & Workflow
 
-### 3.1 Secure OAuth Authentication (Clerk Integration)
+### 3.1 Secure OAuth Authentication & Onboarding
+- **Premium Onboarding:** Both Login and Signup pages use a split-screen design. The informational column provides live instructions on why GitHub linking is essential and how to grant the correct `repo` permissions.
 - **Frontend Identity:** The application uses **Clerk** for robust session management. Users log in securely via GitHub OAuth.
 - **Scope Delegation:** The Clerk application is configured to request the `repo` scope, ensuring the automated agent has write-access solely to edit and push deployment configurations on behalf of the user.
 - **Backend Token Handshake:** When the user initiates a deploy, the frontend securely passes the `userId` to the FastAPI backend. The backend strictly communicates server-to-server with Clerk APIs using a `CLERK_SECRET_KEY` to securely retrieve the user's delegated GitHub Token, completely preventing sensitive OAuth tokens from ever hitting the browser client.
@@ -64,7 +65,7 @@ Ai-Driven-Deployment-tool/
 ## 4. Current State & Next Steps
 - **Phase 1 (UI/UX):** Complete.
 - **Phase 2 (Analysis & Generation):** Complete, including LLM fallback generation.
-- **Phase 3 (Clerk OAuth):** Complete, securing cross-platform secrets.
+- **Phase 3 (Clerk OAuth):** Complete. Implemented premium split-screen authentication with instructional guidance for GitHub linking.
 - **Phase 4 (Generalized LLM Fallback):** Complete.
 - **Phase 5 (CI/CD Pipeline Automation):** Complete. The backend now writes fully customized testing, linting, and Docker building GitHub Actions pipelines that automatically push to the GitHub Container Registry.
 - **Phase 6 (Live GitHub Actions Monitoring):** Complete. Real-time CI/CD step statuses are streamed directly into the dashboard logs via REST API polling.

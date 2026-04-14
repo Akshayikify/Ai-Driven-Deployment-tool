@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@clerk/clerk-react";
 
 interface Deployment {
   id: string;
@@ -65,12 +66,14 @@ interface DeploymentsTableProps {
 }
 
 export default function DeploymentsTable({ className }: DeploymentsTableProps) {
+  const { userId } = useAuth();
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDeployments = async () => {
+    if (!userId) return;
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/v1/analyze/tasks");
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/analyze/tasks?user_id=${userId}`);
       if (response.ok) {
         const data = await response.json();
         setDeployments(data);
@@ -92,7 +95,7 @@ export default function DeploymentsTable({ className }: DeploymentsTableProps) {
     
     const interval = setInterval(fetchDeployments, intervalTime);
     return () => clearInterval(interval);
-  }, [deployments.length, deployments.some(d => d.status === "running" || d.status === "pending")]);
+  }, [userId, deployments.length, deployments.some(d => d.status === "running" || d.status === "pending")]);
 
   if (loading && deployments.length === 0) {
     return (

@@ -6,6 +6,7 @@ class PythonDockerTemplate(DockerTemplate):
     def generate_dockerfile(self, findings: Dict[str, Any]) -> str:
         framework = findings.get("framework", "Python (Generic)")
         entry_point = findings.get("entry_point", "main.py")
+        detected = findings.get("detected_files", [])
         
         # Determine port
         port = 8000
@@ -20,13 +21,27 @@ class PythonDockerTemplate(DockerTemplate):
             "# Multi-stage build for efficiency",
             "FROM python:3.11-slim AS builder",
             "WORKDIR /app",
-            "ENV PYTHONDONTWRITEBYTECODE 1",
-            "ENV PYTHONUNBUFFERED 1",
+            "ENV PYTHONDONTWRITEBYTECODE=1",
+            "ENV PYTHONUNBUFFERED=1",
             "",
-            "RUN apt-get update && apt-get install -y --no-install-recommends gcc python3-dev",
+            "RUN apt-get update && apt-get install -y --no-install-recommends gcc python3-dev && mkdir -p /root/.local",
             "",
-            "COPY requirements.txt .",
-            "RUN pip install --no-cache-dir --user -r requirements.txt",
+        ]
+
+        # Conditional dependency installation
+        if "requirements.txt" in detected:
+            content.append("COPY requirements.txt .")
+            content.append("RUN pip install --no-cache-dir --user -r requirements.txt")
+        elif "pyproject.toml" in detected:
+            content.append("COPY pyproject.toml .")
+            if "poetry.lock" in detected:
+                content.append("COPY poetry.lock .")
+            content.append("RUN pip install --no-cache-dir --user .")
+        elif "Pipfile" in detected:
+            content.append("COPY Pipfile* .")
+            content.append("RUN pip install --no-cache-dir --user pipenv && pipenv install --system")
+
+        content.extend([
             "",
             "FROM python:3.11-slim",
             "WORKDIR /app",
@@ -41,14 +56,16 @@ class PythonDockerTemplate(DockerTemplate):
             f"EXPOSE {port}",
             "",
             "USER appuser",
-        ]
+        ])
 
         if framework == "FastAPI":
             # Strip file extension for uvicorn
             module = os.path.splitext(entry_point)[0].replace(os.path.sep, ".")
             content.append(f'CMD ["uvicorn", "{module}:app", "--host", "0.0.0.0", "--port", "{port}"]')
         elif framework == "Django":
-            content.append(f'CMD ["python", "{entry_point}", "runserver", "0.0.0.0:{port}"]')
+            # Check if manage.py is the entry point
+            cmd_entry = entry_point if "manage.py" in entry_point else "manage.py"
+            content.append(f'CMD ["python", "{cmd_entry}", "runserver", "0.0.0.0:{port}"]')
         elif framework == "Flask":
             module = os.path.splitext(entry_point)[0].replace(os.path.sep, ".")
             content.append(f'ENV FLASK_APP={module}')
@@ -57,14 +74,28 @@ class PythonDockerTemplate(DockerTemplate):
             content.append(f'CMD ["python", "{entry_point}"]')
 
         content.append("")
-        # Simple healthcheck (requires curl)
-        # content.append(f"HEALTHCHECK --interval=30s --timeout=3s CMD curl --fail http://localhost:{port}/health || exit 1")
-
         return "\n".join(content)
 
     def generate_cicd_workflow(self, findings: Dict[str, Any]) -> str:
         """Generates a Python-specific CI/CD pipeline with Flake8, PyTest, and GHCR publishing."""
-        return """name: Python CI/CD Pipeline
+        workdir = findings.get("path", ".")
+        clean_workdir = workdir.strip("./")
+        path_prefix = f"{clean_workdir}/" if clean_workdir and clean_workdir != "." else ""
+        
+        # Determine caching strategy based on detected files
+        detected = findings.get("detected_files", [])
+        cache_config = ""
+        if "requirements.txt" in detected:
+            cache_config = f"""          cache: "pip"
+          cache-dependency-path: "{path_prefix}requirements.txt\""""
+        elif "pyproject.toml" in detected:
+            cache_config = f"""          cache: "pip"
+          cache-dependency-path: "{path_prefix}pyproject.toml\""""
+        elif "Pipfile" in detected:
+            cache_config = f"""          cache: "pip"
+          cache-dependency-path: "{path_prefix}Pipfile\""""
+
+        return f"""name: Python CI/CD Pipeline
 
 on:
   push:
@@ -83,15 +114,18 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-          cache: "pip"
+{cache_config}
 
       - name: Install dependencies
+        working-directory: ./{clean_workdir}
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f pyproject.toml ]; then pip install .; fi
           pip install flake8 pytest
 
       - name: Lint with flake8
+        working-directory: ./{clean_workdir}
         run: |
           # Stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -99,6 +133,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
+        working-directory: ./{clean_workdir}
         run: |
           if [ -d tests ] || ls test_*.py 1> /dev/null 2>&1; then
             pytest
@@ -123,26 +158,57 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{{{ github.actor }}}}
+          password: ${{{{ secrets.GITHUB_TOKEN }}}}
 
       - name: Lowercase repository name
-        run: echo "IMAGE_ID=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        run: echo "IMAGE_ID=$(echo ${{{{ github.repository }}}} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ env.IMAGE_ID }}
+          images: ghcr.io/${{{{ env.IMAGE_ID }}}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./{workdir}
-          file: ./{workdir}/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          context: ./{clean_workdir}
+          file: ./{clean_workdir}/Dockerfile
+          push: ${{{{ github.event_name != 'pull_request' }}}}
+          tags: ${{{{ steps.meta.outputs.tags }}}}
+          labels: ${{{{ steps.meta.outputs.labels }}}}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+"""
+
+    def generate_dockerignore(self, findings: Dict[str, Any]) -> str:
+        return """__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.env
+.venv
+venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
 """

@@ -161,9 +161,9 @@ class AnalysisEngine:
 
     def _identify_service_roots(self, file_index: dict) -> list:
         """Finds directories that likely represent the root of a service."""
-        core_manifests = ["package.json", "requirements.txt", "pyproject.toml", "go.mod", "pom.xml", "composer.json", "Gemfile", "Dockerfile"]
+        core_manifests = ["package.json", "requirements.txt", "pyproject.toml", "go.mod", "pom.xml", "composer.json", "Gemfile", "Cargo.toml", "Dockerfile"]
         # Also look for common entry point signals if manifest is missing
-        entry_signals = ["app.py", "main.py", "server.js", "index.js", "main.go", "sentiment_api.py"]
+        entry_signals = ["app.py", "main.py", "server.js", "index.js", "main.go", "sentiment_api.py", "main.rs"]
         
         roots = set()
         for signal in core_manifests + entry_signals:
@@ -220,6 +220,7 @@ class AnalysisEngine:
         self._detect_ruby(findings, workspace_path, file_index, service_path)
         self._detect_swift(findings, workspace_path, file_index, service_path)
         self._detect_java(findings, workspace_path, file_index, service_path)
+        self._detect_rust(findings, workspace_path, file_index, service_path)
         self._detect_html(findings, workspace_path, file_index, service_path)
 
         # Check for existing Dockerfile in this specific dir
@@ -526,6 +527,42 @@ class AnalysisEngine:
                         findings["entry_point"] = path
                         findings["confidence"] += 0.1
                         break
+
+    def _detect_rust(self, findings: dict, workspace_path: str, file_index: dict, service_path: str):
+        cargo_toml = "Cargo.toml"
+        rel_cargo_path = f"{service_path}/{cargo_toml}" if service_path else cargo_toml
+        
+        if rel_cargo_path in file_index["all_files"]:
+            findings["language"] = "Rust"
+            findings["detected_files"].append(cargo_toml)
+            findings["confidence"] = 0.8
+            
+            # Detect entry point (main.rs or lib.rs)
+            rust_entries = ["src/main.rs", "src/lib.rs", "main.rs"]
+            for entry in rust_entries:
+                entry_path = f"{service_path}/{entry}" if service_path else entry
+                if entry_path in file_index["all_files"]:
+                    findings["entry_point"] = entry_path
+                    break
+            
+            # Simple TOML parsing for name and dependencies
+            try:
+                full_path = os.path.join(workspace_path, rel_cargo_path)
+                with open(full_path, "r") as f:
+                    content = f.read()
+                    # Extract project name
+                    name_match = re.search(r'name\s*=\s*"([^"]+)"', content)
+                    if name_match:
+                        findings["name"] = name_match.group(1)
+                    
+                    # Extract dependencies
+                    # This is a very basic regex to find [dependencies] and subsequent keys
+                    if "[dependencies]" in content:
+                        deps_part = content.split("[dependencies]")[1].split("[")[0]
+                        deps = re.findall(r'^(\w+)\s*=', deps_part, re.MULTILINE)
+                        findings["dependencies"] = deps
+            except Exception as e:
+                logger.error(f"Error parsing Cargo.toml: {e}")
 
 
 

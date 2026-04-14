@@ -142,8 +142,8 @@ async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTa
     task_id = str(uuid.uuid4())
     logger.info(f"Received analysis request for {request.repo_url}. Assigned ID: {task_id}")
     
-    # Initialize task status
-    task_manager.update_task(task_id, "initialized", repo_url=request.repo_url)
+    # Initialize task status with user_id for isolation
+    task_manager.update_task(task_id, "initialized", repo_url=request.repo_url, user_id=request.user_id)
     
     background_tasks.add_task(analyze_repo_task, task_id, request.repo_url, request.branch, request.user_id)
     
@@ -161,15 +161,15 @@ async def get_task_status(task_id: str):
     return status
 
 @router.get("/tasks")
-async def list_recent_tasks():
-    """Returns a list of all recent deployment tasks."""
-    return task_manager.list_tasks()
+async def list_recent_tasks(user_id: Optional[str] = None):
+    """Returns a list of all recent deployment tasks for a specific user."""
+    return task_manager.list_tasks(user_id=user_id)
 
 @router.get("/stats")
-async def get_deployment_analytics():
-    """Retrieves deployment statistics from MongoDB for the analytics dashboard."""
+async def get_deployment_analytics(user_id: Optional[str] = None):
+    """Retrieves deployment statistics from MongoDB for the analytics dashboard, isolated by user."""
     from app.db.mongodb import db
-    return await db.get_deployment_stats()
+    return await db.get_deployment_stats(user_id=user_id)
 
 class AutoFixRequest(BaseModel):
     repo_url: str

@@ -2,6 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from loguru import logger
 from app.core.config import settings
 import datetime
+from typing import Optional
 
 class MongoDB:
     client: AsyncIOMotorClient = None
@@ -69,15 +70,19 @@ class MongoDB:
             logger.error(f"Error storing deployment data: {e}")
             return False
 
-    async def get_deployment_stats(self) -> dict:
+    async def get_deployment_stats(self, user_id: Optional[str] = None) -> dict:
         if self.db is None:
             await self.connect_to_mongo()
             
         try:
-            success = await self.db.deployments.count_documents({"status": "success"})
-            failed = await self.db.deployments.count_documents({"status": "failed"})
-            running = await self.db.deployments.count_documents({"status": "running"})
-            total = await self.db.deployments.count_documents({})
+            query = {}
+            if user_id:
+                query["user_id"] = user_id
+
+            success = await self.db.deployments.count_documents({**query, "status": "success"})
+            failed = await self.db.deployments.count_documents({**query, "status": "failed"})
+            running = await self.db.deployments.count_documents({**query, "status": "running"})
+            total = await self.db.deployments.count_documents(query)
             
             return {
                 "success": success,
@@ -86,7 +91,7 @@ class MongoDB:
                 "total": total
             }
         except Exception as e:
-            logger.error(f"Error getting deployment stats: {e}")
+            logger.error(f"Error getting deployment stats for user {user_id}: {e}")
             return {"success": 0, "failed": 0, "running": 0, "total": 0}
 
 db = MongoDB()
