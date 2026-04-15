@@ -22,7 +22,7 @@ export default function Login() {
             <div className="p-2 bg-gradient-to-br from-neon-cyan to-indigo-600 rounded-xl shadow-lg shadow-neon-cyan/20">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight">Akshayikify <span className="text-neon-cyan text-sm font-medium uppercase tracking-widest">Auto-Deploy</span></span>
+            <span className="text-xl font-bold tracking-tight">Autodeploy <span className="text-neon-cyan text-sm font-medium uppercase tracking-widest">Auto-Deploy</span></span>
           </div>
 
           <h1 className="text-3xl lg:text-5xl font-extrabold leading-tight mb-6">
@@ -75,10 +75,10 @@ export default function Login() {
                 socialButtonsBlockButtonText: "text-white font-medium",
                 dividerLine: "bg-slate-800",
                 dividerText: "text-slate-500",
-                formFieldLabel: "text-slate-300",
-                formFieldInput: "bg-slate-950 border-slate-800 text-white focus:border-neon-cyan/50",
-                footerActionText: "text-slate-400",
-                footerActionLink: "text-neon-cyan hover:text-cyan-300",
+                formFieldLabel: "text-slate-100 font-semibold",
+                formFieldInput: "bg-slate-800/50 border border-slate-600 text-white focus:border-neon-cyan focus:ring-2 focus:ring-neon-cyan/20 transition-all duration-200 hover:border-slate-500 backdrop-blur-sm",
+                footerActionText: "text-slate-200",
+                footerActionLink: "text-neon-cyan hover:text-cyan-300 font-bold",
                 identityPreviewText: "text-white",
                 identityPreviewEditButtonIcon: "text-neon-cyan"
               }
