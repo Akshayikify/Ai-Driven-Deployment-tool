@@ -1,225 +1,123 @@
-import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { motion } from "framer-motion";
+import { GitCommit, Search, Box, Cloud, LineChart, ArrowRight } from "lucide-react";
 
 export default function WorkflowSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"]
-  });
-
-  const y = useTransform(scrollYProgress, [0, 1], [50, -50]);
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
   const workflowSteps = [
     {
       id: 1,
-      title: "Code Commit",
-      description: "Push your code to any Git repository",
-      icon: "💻",
-      color: "from-green-500 to-emerald-600",
-      delay: "0s",
+      title: "Commit Code",
+      description: "Push your code to any Git repository including GitHub, GitLab, or Bitbucket.",
+      icon: <GitCommit className="w-6 h-6" />,
+      color: "bg-slate-100 text-slate-700",
     },
     {
       id: 2,
-      title: "AI Analyzer",
-      description: "Config + security check with AI intelligence",
-      icon: "🤖",
-      color: "from-brand-500 to-brand-700",
-      delay: "0.5s",
+      title: "AI Analysis",
+      description: "AI-powered checks for configuration errors, security vulnerabilities, and optimizations.",
+      icon: <Search className="w-6 h-6" />,
+      color: "bg-blue-100 text-blue-700",
     },
     {
       id: 3,
-      title: "Containerization & Testing",
-      description: "Automated Docker builds and comprehensive testing",
-      icon: "🧪",
-      color: "from-blue-500 to-cyan-600",
-      delay: "1s",
+      title: "Build Image",
+      description: "Automated Docker containerization and comprehensive testing of your application.",
+      icon: <Box className="w-6 h-6" />,
+      color: "bg-indigo-100 text-indigo-700",
     },
     {
       id: 4,
-      title: "Deployment to Cloud/K8s",
-      description: "Zero-downtime deployment across environments",
-      icon: "🚀",
-      color: "from-purple-500 to-pink-600",
-      delay: "1.5s",
+      title: "Cloud Deploy",
+      description: "Zero-downtime deployment across AWS, GCP, Azure, or private Kubernetes clusters.",
+      icon: <Cloud className="w-6 h-6" />,
+      color: "bg-green-100 text-green-700",
     },
     {
       id: 5,
-      title: "Monitoring & Feedback",
-      description: "Continuous monitoring with intelligent feedback loops",
-      icon: "📊",
-      color: "from-orange-500 to-red-600",
-      delay: "2s",
+      title: "Monitor",
+      description: "Continuous health monitoring with intelligent feedback and automated rollbacks.",
+      icon: <LineChart className="w-6 h-6" />,
+      color: "bg-orange-100 text-orange-700",
     },
   ];
 
   return (
-    <motion.section
-      ref={sectionRef}
-      id="workflow"
-      className="py-24 bg-background relative overflow-hidden"
-      style={{ y, opacity }}
-    >
-      {/* Animated background */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-gradient-to-br from-brand-200/20 to-brand-400/20 rounded-full blur-3xl animate-float"></div>
-        <div
-          className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-gradient-to-br from-purple-200/20 to-pink-400/20 rounded-full blur-3xl animate-float"
-          style={{ animationDelay: "3s" }}
-        ></div>
-      </div>
-
-      <div className="container mx-auto px-6 relative z-10">
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-        >
-          <h2 className="text-5xl md:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-brand-600 to-purple-600 bg-clip-text text-transparent">
-              How It Works
-            </span>
+    <section id="workflow" className="py-24 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+      <div className="container mx-auto px-6 max-w-7xl">
+        <div className="text-center max-w-3xl mx-auto mb-20">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">
+            Streamlined <span className="text-blue-600">to Perfection</span>
           </h2>
-          <p className="text-xl text-gray-600 dark:text-white max-w-3xl mx-auto">
-            See your deployment workflow transform from complex to effortless in
-            5 simple steps
+          <p className="text-lg text-slate-600 dark:text-slate-400">
+            Our optimized pipeline handles the heavy lifting, allowing your team to focus 
+            on writing code while we handle the distribution.
           </p>
-        </motion.div>
+        </div>
 
-        {/* Desktop Workflow - Horizontal */}
+        {/* Desktop Workflow */}
         <div className="hidden lg:block">
           <div className="relative">
-            {/* Connection Lines */}
-            <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-brand-200 via-purple-200 to-orange-200 rounded-full transform -translate-y-1/2"></div>
+            {/* Connection Line */}
+            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-800 -translate-y-1/2 z-0"></div>
 
-            {/* Animated flow */}
-            <div className="absolute top-1/2 left-0 w-full h-1 transform -translate-y-1/2">
-              <div
-                className="w-16 h-1 bg-gradient-to-r from-brand-500 to-purple-500 rounded-full"
-                style={{ animation: "flow 8s ease-in-out infinite" }}
-              ></div>
-            </div>
-
-            <div className="grid grid-cols-5 gap-8">
+            <div className="grid grid-cols-5 gap-4 relative z-10">
               {workflowSteps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className="flex flex-col items-center relative group"
-                  style={{ animationDelay: step.delay }}
-                >
-                  {/* Step Circle */}
-                  <div
-                    className={`relative w-24 h-24 bg-gradient-to-br ${step.color} rounded-full flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-1000 transform group-hover:scale-110`}
-                    style={{
-                      animationDelay: step.delay,
-                      animation: 'float 8s ease-in-out infinite'
-                    }}
+                <div key={step.id} className="flex flex-col items-center">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                    viewport={{ once: true }}
+                    className={`w-16 h-16 rounded-full ${step.color} flex items-center justify-center border-4 border-white dark:border-slate-900 shadow-sm mb-6`}
                   >
-                    <span className="text-3xl filter drop-shadow-sm">
-                      {step.icon}
-                    </span>
-
-                    {/* Glow effect */}
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${step.color} rounded-full opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500`}
-                    ></div>
-                  </div>
-
-                  {/* Step Number */}
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-white dark:bg-gray-800 rounded-full border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300 shadow-md">
-                    {step.id}
-                  </div>
-
-                  {/* Content */}
-                  <div className="mt-6 text-center">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-brand-700 dark:group-hover:text-brand-700 transition-colors duration-300">
-                      {step.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-white max-w-xs group-hover:text-gray-700 dark:group-hover:text-gray-700 transition-colors duration-300">
+                    {step.icon}
+                  </motion.div>
+                  <div className="text-center px-4">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{step.title}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {step.description}
                     </p>
                   </div>
-
-                  {/* Animated connector */}
-                  {index < workflowSteps.length - 1 && (
-                    <div className="absolute top-12 -right-4 w-8 h-1">
-                      <div
-                        className={`w-full h-full bg-gradient-to-r ${step.color} opacity-50 rounded-full`}
-                        style={{ animation: "pulse 6s ease-in-out infinite" }}
-                      ></div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Mobile/Tablet Workflow - Vertical */}
-        <div className="lg:hidden">
-          <div className="space-y-8">
-            {workflowSteps.map((step, index) => (
-              <div key={step.id} className="flex items-start space-x-6 group">
-                {/* Step Circle */}
-                <div
-                  className={`relative w-20 h-20 bg-gradient-to-br ${step.color} rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-1000 transform group-hover:scale-110 flex-shrink-0`}
-                  style={{
-                    animation: 'float 8s ease-in-out infinite',
-                    animationDelay: step.delay
-                  }}
-                >
-                  <span className="text-2xl filter drop-shadow-sm">
-                    {step.icon}
-                  </span>
-
-                  {/* Step Number */}
-                  <div className="absolute -top-2 -right-2 w-7 h-7 bg-white dark:bg-gray-800 rounded-full border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300 shadow-md">
-                    {step.id}
-                  </div>
-
-                  {/* Glow effect */}
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${step.color} rounded-full opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500`}
-                  ></div>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-brand-700 dark:group-hover:text-brand-700 transition-colors duration-300">
-                    {step.title}
-                  </h3>
-                  <p className="text-gray-600 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-700 transition-colors duration-300">
-                    {step.description}
-                  </p>
-                </div>
-
-                {/* Vertical connector */}
-                {index < workflowSteps.length - 1 && (
-                  <div className="absolute left-10 mt-20 w-1 h-8 bg-gradient-to-b from-gray-200 dark:from-gray-600 to-transparent rounded-full"></div>
-                )}
+        {/* Mobile Workflow */}
+        <div className="lg:hidden space-y-12">
+          {workflowSteps.map((step, index) => (
+            <div key={step.id} className="flex gap-6 items-start">
+              <div className={`w-12 h-12 rounded-lg ${step.color} flex items-center justify-center flex-shrink-0 shadow-sm border border-slate-200 dark:border-slate-800`}>
+                {step.icon}
               </div>
-            ))}
-          </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                  <span className="text-blue-600 mr-2">{step.id}.</span>
+                  {step.title}
+                </h3>
+                <p className="text-slate-600 dark:text-slate-400 text-sm">
+                  {step.description}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Bottom Stats */}
-        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-          <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/20 dark:border-gray-600/20">
-            <div className="text-3xl font-bold text-brand-600 mb-2">90%</div>
-            <div className="text-gray-600 dark:text-white">Faster Deployments</div>
-          </div>
-          <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/20 dark:border-gray-600/20">
-            <div className="text-3xl font-bold text-purple-600 mb-2">99.9%</div>
-            <div className="text-gray-600 dark:text-white">Success Rate</div>
-          </div>
-          <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/20 dark:border-gray-600/20">
-            <div className="text-3xl font-bold text-green-600 mb-2">0</div>
-            <div className="text-gray-600 dark:text-white">Downtime Required</div>
-          </div>
+        <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { label: "Deployment Speed", value: "90%", desc: "Faster compared to manual pipelines", color: "blue" },
+            { label: "Deployment Success", value: "99.9%", desc: "Reliability you can depend on", color: "green" },
+            { label: "Infrastructure Cost", value: "30%", desc: "Average savings via AI optimization", color: "indigo" },
+          ].map((stat, i) => (
+            <div key={i} className="p-8 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm text-center">
+              <div className="text-4xl font-black text-slate-900 dark:text-white mb-2">{stat.value}</div>
+              <div className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-3">{stat.label}</div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{stat.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
-    </motion.section>
+    </section>
   );
 }

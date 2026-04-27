@@ -177,37 +177,37 @@ export default function AIAgent({ className }: AIAgentProps) {
   };
 
   return (
-    <Card className={cn("bg-slate-800/50 border-slate-700 flex flex-col h-full", className)}>
-      <div className="p-4 border-b border-slate-700/50">
+    <Card className={cn("bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col h-full shadow-sm", className)}>
+      <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
+            <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center border border-blue-200 dark:border-blue-800">
+              <Bot className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">AI Assistant</h3>
-              <p className="text-xs text-slate-400">Auto Deploy Intelligence</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Deployment Assistant</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Powered by AutoDeploy AI</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
               className={cn(
-                "text-xs border",
+                "text-[10px] font-bold uppercase tracking-wider",
                 isActive
-                  ? "border-green-500/30 text-green-400 bg-green-500/10"
-                  : "border-slate-600 text-slate-400 bg-slate-700/50",
+                  ? "border-green-200 text-green-700 bg-green-50 dark:border-green-900/30 dark:text-green-400 dark:bg-green-900/20"
+                  : "border-slate-200 text-slate-500 bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:bg-slate-800/50",
               )}
             >
-              {isActive ? "Active" : "Standby"}
+              {isActive ? "Connected" : "Standby"}
             </Badge>
             <Button
               variant="ghost"
               size="icon"
               onClick={clearChat}
-              className="w-8 h-8 text-slate-400 hover:text-white hover:bg-slate-700/50"
-              title="Start New Chat"
+              className="w-8 h-8 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              title="Reset Conversation"
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
@@ -216,30 +216,30 @@ export default function AIAgent({ className }: AIAgentProps) {
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/20 dark:bg-slate-950/20 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
         {messages.map((message) => (
           <div
             key={message.id}
             className={cn(
-              "flex gap-2",
+              "flex gap-4",
               message.type === 'user' ? "justify-end" : "justify-start"
             )}
           >
             {message.type === 'agent' && (
-              <div className="w-6 h-6 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center flex-shrink-0">
-                <Bot className="w-3 h-3 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <Bot className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
             )}
             <div
               className={cn(
-                "max-w-[80%] p-3 rounded-lg text-sm",
+                "max-w-[80%] p-5 rounded-2xl text-sm leading-relaxed shadow-sm",
                 message.type === 'user'
-                  ? "bg-neon-blue text-white"
-                  : "bg-slate-700/50 text-slate-300 border border-slate-600/50"
+                  ? "bg-blue-600 text-white rounded-tr-none font-medium"
+                  : "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-tl-none"
               )}
             >
               {message.type === 'agent' ? (
-                <div className="prose prose-sm prose-invert max-w-none">
+                <div className="prose prose-sm dark:prose-invert max-w-none prose-slate prose-p:leading-relaxed prose-p:font-medium">
                   <ReactMarkdown>
                     {message.content}
                   </ReactMarkdown>
@@ -249,22 +249,22 @@ export default function AIAgent({ className }: AIAgentProps) {
               )}
             </div>
             {message.type === 'user' && (
-              <div className="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center flex-shrink-0">
-                <User className="w-3 h-3 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <User className="w-5 h-5 text-slate-600 dark:text-slate-400" />
               </div>
             )}
           </div>
         ))}
         {isTyping && (
-          <div className="flex gap-2 justify-start">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center">
-              <Bot className="w-3 h-3 text-white" />
+          <div className="flex gap-3 justify-start">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+              <Bot className="w-4 h-4 text-slate-600 dark:text-slate-400" />
             </div>
-            <div className="bg-slate-700/50 p-3 rounded-lg border border-slate-600/50">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="flex gap-1.5">
+                <div className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce" />
+                <div className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                <div className="w-1.5 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
               </div>
             </div>
           </div>
@@ -273,31 +273,31 @@ export default function AIAgent({ className }: AIAgentProps) {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-slate-700/50">
-        <div className="flex gap-2">
+      <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+        <div className="relative group">
           <Textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask me anything about your deployment..."
-            className="flex-1 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 resize-none"
-            rows={2}
+            placeholder="Describe your deployment or paste a repo URL..."
+            className="w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 resize-none pr-14 focus-visible:ring-blue-500 rounded-xl min-h-[100px] transition-all"
+            rows={3}
           />
           <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isTyping}
-            className="bg-neon-blue hover:bg-neon-blue/80 text-white px-3"
+            className="absolute right-3 bottom-3 bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 p-0 rounded-lg shadow-sm transition-all"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-5 h-5" />
           </Button>
         </div>
 
         {/* Quick Actions */}
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mt-4">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 text-xs border-slate-600 text-slate-300 hover:bg-slate-700/50"
+            className="text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
             onClick={() => setInputValue("Analyze my project structure")}
           >
             Analyze Project
@@ -305,10 +305,18 @@ export default function AIAgent({ className }: AIAgentProps) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 text-xs border-slate-600 text-slate-300 hover:bg-slate-700/50"
-            onClick={() => setInputValue("Optimize deployment")}
+            className="text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={() => setInputValue("Optimize my CI/CD workflow")}
           >
-            Optimize
+            Optimize Workflow
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs font-semibold border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            onClick={() => setInputValue("Check deployment security")}
+          >
+            Security Audit
           </Button>
         </div>
       </div>

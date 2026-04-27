@@ -105,25 +105,25 @@ export default function LogMonitoringCard({ className }: { className?: string })
     };
 
     return (
-        <Card className={cn("bg-slate-900 border-slate-700 flex flex-col overflow-hidden shadow-2xl", className)}>
+        <Card className={cn("bg-slate-950 border-slate-800 flex flex-col overflow-hidden shadow-sm rounded-xl", className)}>
             {/* Terminal Header */}
-            <div className="bg-slate-800/80 border-b border-slate-700 px-4 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-neon-cyan" />
-                    <span className="text-xs font-mono font-medium text-slate-300">Live Deployment Logs</span>
-                </div>
+            <div className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                        <span className="relative flex h-2 w-2">
+                    <Terminal className="w-4 h-4 text-slate-400" />
+                    <span className="text-xs font-bold font-mono tracking-tight text-slate-200">System Logs</span>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-1.5 w-1.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                         </span>
-                        <span className="text-[10px] font-mono text-green-400">CONNECTED</span>
+                        <span className="text-[10px] font-bold font-mono text-green-500 uppercase tracking-widest">Live</span>
                     </div>
                     <div className="flex gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-slate-800" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-slate-800" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-slate-800" />
                     </div>
                 </div>
             </div>
@@ -131,58 +131,65 @@ export default function LogMonitoringCard({ className }: { className?: string })
             {/* Terminal Content */}
             <div
                 ref={scrollRef}
-                className="flex-1 p-4 font-mono text-[11px] sm:text-xs overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent space-y-2"
+                className="flex-1 p-5 font-mono text-[11px] sm:text-xs overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent space-y-2.5 leading-relaxed"
             >
                 {logs.map((log) => (
-                    <div key={log.id} className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
-                        <div className="flex gap-3">
-                            <span className="text-slate-500 flex-shrink-0">[{log.timestamp}]</span>
+                    <div key={log.id} className="flex flex-col gap-2 group">
+                        <div className="flex gap-4">
+                            <span className="text-slate-600 flex-shrink-0 font-medium">[{log.timestamp}]</span>
                             <span className={cn(
-                                "font-semibold flex-shrink-0 uppercase",
-                                log.level === "info" && "text-blue-400",
-                                log.level === "success" && "text-green-400",
-                                log.level === "warning" && "text-yellow-400",
-                                log.level === "error" && "text-red-400",
+                                "font-black flex-shrink-0 uppercase tracking-tighter w-12",
+                                log.level === "info" && "text-blue-500",
+                                log.level === "success" && "text-green-500",
+                                log.level === "warning" && "text-amber-500",
+                                log.level === "error" && "text-red-500",
                             )}>
-                                {log.level}:
+                                {log.level}
                             </span>
-                            <span className="text-slate-300 break-all">{log.message}</span>
+                            <span className="text-slate-300 break-all font-medium">{log.message}</span>
                         </div>
                         {log.autoFix && log.autoFix.actions && log.autoFix.actions.length > 0 && (
-                            <div className="ml-16 mt-0.5 mb-1 flex items-center gap-2">
-                                <Button
-                                    size="sm"
-                                    onClick={() => applyAutoFix(log.autoFix!.actions)}
-                                    disabled={isFixing}
-                                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs h-7 px-3 py-0 flex items-center gap-1.5"
-                                >
-                                    <Zap className="w-3 h-3" />
-                                    {isFixing ? "Applying Fix..." : "Apply Auto-Fix automatically"}
-                                </Button>
-                                <span className="text-slate-500 text-[10px]">Applies {log.autoFix.actions.length} file modification(s)</span>
+                            <div className="ml-16 mt-1 mb-2 flex flex-col gap-2">
+                                <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 max-w-lg">
+                                    <p className="text-[10px] text-blue-400 font-bold uppercase mb-2">AI-Driven Solution Available</p>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => applyAutoFix(log.autoFix!.actions)}
+                                        disabled={isFixing}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] h-8 px-4 font-bold shadow-sm"
+                                    >
+                                        <Zap className="w-3.5 h-3.5 mr-2" />
+                                        {isFixing ? "Processing..." : "Deploy Automatic Fix"}
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </div>
                 ))}
-                <div className="flex gap-2 items-center text-slate-400 animate-pulse pt-1">
-                    <span>&gt;</span>
-                    <div className="w-2 h-4 bg-slate-400" />
+                {logs.length === 0 && (
+                    <div className="flex items-center justify-center h-full text-slate-600 font-mono text-xs">
+                        Waiting for log stream...
+                    </div>
+                )}
+                <div className="flex gap-2 items-center text-slate-700 pt-2">
+                    <span className="font-black">&gt;</span>
+                    <div className="w-1.5 h-4 bg-blue-600/40 animate-pulse" />
                 </div>
             </div>
 
             {/* Terminal Footer */}
-            <div className="px-4 py-2 bg-slate-800/40 border-t border-slate-700/50 flex items-center justify-between">
-                <span className="text-[10px] text-slate-500 font-mono">Process-ID: 8842</span>
-                <div className="flex gap-3">
+            <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-800 flex items-center justify-between">
+                <span className="text-[10px] text-slate-600 font-mono font-bold tracking-tight uppercase">Session Active</span>
+                <div className="flex gap-4">
                     <button
                         onClick={() => setLogs([])}
-                        className="text-slate-500 hover:text-white transition-colors active:rotate-180 duration-500"
+                        className="text-slate-600 hover:text-slate-300 transition-colors"
                         title="Clear Logs"
                     >
-                        <RefreshCw className="w-3 h-3" />
+                        <RefreshCw className="w-3.5 h-3.5" />
                     </button>
-                    <button className="text-slate-500 hover:text-white transition-colors">
-                        <Maximize2 className="w-3 h-3" />
+                    <button className="text-slate-600 hover:text-slate-300 transition-colors">
+                        <Maximize2 className="w-3.5 h-3.5" />
                     </button>
                 </div>
             </div>

@@ -1,44 +1,35 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { Menu, X, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   SignedIn,
   SignedOut,
-  SignInButton,
-  SignUpButton,
   UserButton,
-  useUser,
   useClerk
 } from "@clerk/clerk-react";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, isSignedIn } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
 
   const handleNavClick = (section: string) => {
     if (section === 'contact') {
-      // Scroll to footer
-      const footer = document.getElementById('footer');
-      if (footer) {
-        footer.scrollIntoView({ behavior: 'smooth' });
+      if (window.location.pathname !== '/') {
+        navigate('/#contact');
+        // The scroll might need a moment or handle via Index.tsx
+      } else {
+        const contactSection = document.getElementById('contact');
+        if (contactSection) {
+          contactSection.scrollIntoView({ behavior: 'smooth' });
+        }
       }
     } else if (section === 'features') {
-      // Navigate to features page
       navigate('/features');
     } else if (section === 'workflow') {
-      // Navigate to workflow page
       navigate('/workflow');
     } else {
-      // Navigate to home page for other sections
       navigate('/');
     }
     setIsMobileMenuOpen(false);
@@ -49,72 +40,59 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 w-full z-50 bg-white/10 dark:bg-black/10 backdrop-blur-lg border border-white/20 dark:border-white/10 shadow-2xl transition-all duration-300">
-      <div className="container mx-auto px-4 sm:px-6 py-4">
+    <header className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-all duration-300">
+      <div className="container mx-auto px-4 sm:px-6 py-4 max-w-7xl">
         <nav className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-3">
-              <span className="text-xl sm:text-2xl font-bold gradient-text-neon font-mono tracking-tight">
-                Auto Deploy.AI
-              </span>
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-md transition-transform hover:scale-105">
+                <ShieldCheck className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                  AutoDeploy.ai
+                </h1>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">
+                  Intelligent Infrastructure
+                </p>
+              </div>
             </Link>
           </div>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
-            <Link
-              to="/"
-              className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-all duration-300 font-medium relative group text-sm lg:text-base"
-            >
-              Home
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neon-blue to-neon-cyan group-hover:w-full transition-all duration-300"></span>
-            </Link>
-            <button
-              onClick={() => handleNavClick('features')}
-              className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-all duration-300 font-medium relative group text-sm lg:text-base"
-            >
-              Features
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neon-blue to-neon-cyan group-hover:w-full transition-all duration-300"></span>
-            </button>
-            <button
-              onClick={() => handleNavClick('workflow')}
-              className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-all duration-300 font-medium relative group text-sm lg:text-base"
-            >
-              Workflow
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neon-blue to-neon-cyan group-hover:w-full transition-all duration-300"></span>
-            </button>
-            <button
-              onClick={() => handleNavClick('contact')}
-              className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-all duration-300 font-medium relative group text-sm lg:text-base"
-            >
-              Contact
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-neon-blue to-neon-cyan group-hover:w-full transition-all duration-300"></span>
-            </button>
+          <div className="hidden md:flex items-center space-x-8">
+            {['Home', 'Features', 'Workflow', 'Contact'].map((item) => (
+              <button
+                key={item}
+                onClick={() => handleNavClick(item.toLowerCase())}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                {item}
+              </button>
+            ))}
           </div>
 
           {/* Right Side Buttons */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
-
-
+          <div className="flex items-center space-x-4">
             <SignedIn>
               <UserButton afterSignOutUrl="/" />
             </SignedIn>
 
             <SignedOut>
-              <div className="hidden sm:flex space-x-2">
+              <div className="hidden sm:flex items-center space-x-3">
                 <Button
                   variant="ghost"
-                  className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan border border-transparent hover:border-neon-blue/30 dark:hover:border-neon-cyan/30 transition-all duration-300 rounded-xl text-sm"
+                  className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600"
                   asChild
                 >
-                  <Link to="/login">Login</Link>
+                  <Link to="/login">Sign in</Link>
                 </Button>
                 <Button
-                  className="bg-neon-blue text-white hover:bg-neon-blue/90 border border-neon-blue hover:border-neon-blue/80 transition-all duration-300 rounded-xl text-sm px-3 sm:px-4 shadow-lg hover:shadow-xl"
+                  className="bg-blue-600 text-white hover:bg-blue-700 font-semibold px-5 shadow-sm rounded-lg"
                   asChild
                 >
-                  <Link to="/signup">Signup</Link>
+                  <Link to="/signup">Get Started</Link>
                 </Button>
               </div>
             </SignedOut>
@@ -122,68 +100,54 @@ export default function Header() {
             {/* Mobile Menu Button */}
             <button
               onClick={toggleMobileMenu}
-              className="md:hidden p-2 text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-colors"
+              className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </nav>
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-gray-200/30 dark:border-neon-blue/20">
-            <div className="flex flex-col space-y-3 pt-4">
-              <Link
-                to="/"
-                className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-all duration-300 font-medium px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Home
-              </Link>
-              <button
-                onClick={() => handleNavClick('features')}
-                className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-all duration-300 font-medium px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 text-left"
-              >
-                Features
-              </button>
-              <button
-                onClick={() => handleNavClick('workflow')}
-                className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-all duration-300 font-medium px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 text-left"
-              >
-                Workflow
-              </button>
-              <button
-                onClick={() => handleNavClick('contact')}
-                className="text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan transition-all duration-300 font-medium px-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 text-left"
-              >
-                Contact
-              </button>
-              <div className="pt-2 border-t border-gray-200/30 dark:border-neon-blue/20">
+          <div className="md:hidden mt-4 pb-6 border-t border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-col space-y-4 pt-6">
+              {['Home', 'Features', 'Workflow', 'Contact'].map((item) => (
+                <button
+                  key={item}
+                  onClick={() => handleNavClick(item.toLowerCase())}
+                  className="text-base font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 text-left px-2"
+                >
+                  {item}
+                </button>
+              ))}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                 <SignedIn>
-                  <div className="px-2 py-2">
+                  <div className="px-2">
                     <UserButton afterSignOutUrl="/" showName />
                   </div>
                 </SignedIn>
                 <SignedOut>
-                  <Button
-                    variant="ghost"
-                    className="w-full text-left text-gray-700 dark:text-gray-300 hover:text-neon-blue dark:hover:text-neon-cyan border border-transparent hover:border-neon-blue/30 dark:hover:border-neon-cyan/30 transition-all duration-300 rounded-xl mb-2"
-                    onClick={() => {
-                      navigate("/login");
-                      setIsMobileMenuOpen(false);
-                    }}
-                  >
-                    Login
-                  </Button>
-                  <Button
-                    className="w-full text-left bg-neon-blue text-white hover:bg-neon-blue/90 border border-neon-blue hover:border-neon-blue/80 transition-all duration-300 rounded-xl"
-                    onClick={() => {
-                      navigate("/signup");
-                      setIsMobileMenuOpen(false);
-                    }}
-                  >
-                    Signup
-                  </Button>
+                  <div className="space-y-3 px-2">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start font-semibold"
+                      onClick={() => {
+                        navigate("/login");
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      Sign in
+                    </Button>
+                    <Button
+                      className="w-full justify-start bg-blue-600 text-white font-semibold"
+                      onClick={() => {
+                        navigate("/signup");
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      Get Started
+                    </Button>
+                  </div>
                 </SignedOut>
               </div>
             </div>

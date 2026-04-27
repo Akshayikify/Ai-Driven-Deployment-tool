@@ -14,25 +14,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function Dashboard() {
-  const [backendStatus, setBackendStatus] = useState<{ status: string, database: string } | null>(null);
-  const [loading, setLoading] = useState(true);
   const { steps, estimatedDuration } = useDeployment();
   const { user, isLoaded } = useUser();
 
   const hasGitHub = user?.externalAccounts?.some(account => account.provider === 'github');
-
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/health")
-      .then((res) => res.json())
-      .then((data) => {
-        setBackendStatus(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Backend health check failed:", err);
-        setLoading(false);
-      });
-  }, []);
 
   const connectGitHub = async () => {
     try {
@@ -59,30 +44,24 @@ export default function Dashboard() {
     <DashboardLayout>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
         {/* Welcome Section */}
-        <Card className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 border-slate-700 p-4 sm:p-6 mb-6">
+        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-4 sm:p-6 mb-6 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center flex-shrink-0">
-                <Activity className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 border border-blue-100 dark:border-blue-800">
+                <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   Welcome, {user?.firstName || "Developer"}
                 </h1>
-                <p className="text-slate-400 text-sm sm:text-base mb-2">Deploy your applications with AI-powered automation</p>
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${loading ? 'bg-yellow-500 animate-pulse' : backendStatus ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-xs font-mono text-slate-300">
-                    Backend: {loading ? "Connecting..." : backendStatus ? `ONLINE (DB: ${backendStatus.database})` : "OFFLINE"}
-                  </span>
-                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base">Deploy your applications with AI-powered automation</p>
               </div>
             </div>
 
             {isLoaded && !hasGitHub && (
               <Button 
                 onClick={connectGitHub}
-                className="bg-[#24292F] hover:bg-[#24292F]/90 text-white border border-slate-700 shadow-xl neon-glow-blue flex items-center gap-2 transition-all duration-300 transform hover:scale-105"
+                className="bg-[#24292F] hover:bg-[#24292F]/90 text-white flex items-center gap-2 transition-all shadow-sm"
               >
                 <Github className="w-4 h-4" />
                 <span>Connect GitHub</span>
@@ -91,19 +70,19 @@ export default function Dashboard() {
             )}
 
             {isLoaded && hasGitHub && (
-              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-full">
-                <Github className="w-4 h-4 text-green-400" />
-                <span className="text-xs font-medium text-green-400">GitHub Linked</span>
+              <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 px-3 py-1.5 rounded-full">
+                <Github className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <span className="text-xs font-semibold text-green-600 dark:text-green-400">GitHub Linked</span>
               </div>
             )}
           </div>
         </Card>
 
         {!hasGitHub && isLoaded && (
-          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-            <p className="text-sm text-amber-200">
-              <span className="font-semibold text-amber-500">Note:</span> Please connect your GitHub account to enable automated deployment and repository discovery. This tool requires repository access to function correctly.
+          <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-xl flex items-center gap-3 shadow-sm">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <span className="font-bold text-amber-700 dark:text-amber-400">Note:</span> Please connect your GitHub account to enable automated deployment and repository discovery.
             </p>
           </div>
         )}
@@ -119,16 +98,16 @@ export default function Dashboard() {
             <LogMonitoringCard className="lg:col-span-3 h-[500px]" />
 
             {/* Deployment Status - 25% */}
-            <Card className="lg:col-span-1 bg-slate-800/50 border-slate-700 p-4 sm:p-6 flex flex-col h-[500px]">
-              <div className="flex items-center justify-between mb-4">
+            <Card className="lg:col-span-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col h-[500px] shadow-sm">
+              <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
                 <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-neon-cyan flex-shrink-0" />
-                  <h3 className="text-base sm:text-lg font-semibold text-white">Deployment Status</h3>
+                  <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Deployment Status</h3>
                 </div>
                 {estimatedDuration && (
                   <div className="flex flex-col items-end">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">Est. Time</span>
-                    <span className="text-xs font-mono text-neon-cyan">{estimatedDuration}</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Est. Time</span>
+                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{estimatedDuration}</span>
                   </div>
                 )}
               </div>
@@ -139,7 +118,7 @@ export default function Dashboard() {
           </div>
 
           {/* 3. Recent Deployments Table */}
-          <div className="space-y-6">
+          <div className="pt-4">
             <DeploymentsTable />
           </div>
         </div>

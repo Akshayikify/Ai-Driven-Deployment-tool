@@ -18,36 +18,36 @@ interface DeploymentStepperProps {
 const steps: Step[] = [
   {
     id: "upload",
-    title: "Upload Code",
-    description: "Upload your project files",
+    title: "Upload",
+    description: "Source code ready",
     icon: Upload,
     status: "pending",
   },
   {
     id: "analyze",
-    title: "AI Analysis",
-    description: "Analyzing dependencies",
+    title: "Analyze",
+    description: "Deep AI check",
     icon: Search,
     status: "pending",
   },
   {
     id: "build",
     title: "Build",
-    description: "Building your application",
+    description: "Asset compilation",
     icon: Cog,
     status: "pending",
   },
   {
     id: "deploy",
     title: "Deploy",
-    description: "Deploying to production",
+    description: "Live environment",
     icon: Rocket,
     status: "pending",
   },
   {
     id: "monitor",
     title: "Monitor",
-    description: "Monitoring deployment",
+    description: "Stability check",
     icon: Monitor,
     status: "pending",
   },
@@ -61,42 +61,37 @@ export default function DeploymentStepper({
     ...step,
     status:
       index < currentStep
-        ? "completed"
+        ? ("completed" as const)
         : index === currentStep
-          ? "active"
-          : "pending",
+          ? ("active" as const)
+          : ("pending" as const),
   }));
 
   return (
     <div className={cn("w-full", className)}>
       {/* Mobile Layout */}
-      <div className="block sm:hidden space-y-4 mb-8">
-        {updatedSteps.map((step, index) => {
+      <div className="block sm:hidden space-y-6 mb-12">
+        {updatedSteps.map((step) => {
           const Icon = step.icon;
 
           return (
-            <div key={step.id} className="flex items-center gap-4">
+            <div key={step.id} className="flex items-center gap-5">
               {/* Step Circle */}
               <div
                 className={cn(
-                  "relative w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 flex-shrink-0",
+                  "relative w-12 h-12 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 flex-shrink-0 shadow-sm",
                   step.status === "completed" &&
-                    "bg-green-500 text-white shadow-lg shadow-green-500/30",
+                    "bg-green-600 border-green-600 text-white",
                   step.status === "active" &&
-                    "bg-neon-blue text-white shadow-lg shadow-neon-blue/50 animate-pulse",
+                    "bg-blue-600 border-blue-600 text-white animate-pulse",
                   step.status === "pending" &&
-                    "bg-slate-700 text-slate-400 border-2 border-slate-600",
+                    "bg-white dark:bg-slate-900 text-slate-300 border-slate-100 dark:border-slate-800",
                 )}
               >
                 {step.status === "completed" ? (
-                  <Check className="w-5 h-5" />
+                  <Check className="w-6 h-6" />
                 ) : (
-                  <Icon className="w-5 h-5" />
-                )}
-
-                {/* Glowing effect for active step */}
-                {step.status === "active" && (
-                  <div className="absolute inset-0 rounded-full bg-neon-blue animate-ping opacity-20" />
+                  <Icon className="w-6 h-6" />
                 )}
               </div>
 
@@ -104,9 +99,9 @@ export default function DeploymentStepper({
               <div className="flex-1 min-w-0">
                 <h3
                   className={cn(
-                    "text-sm font-semibold transition-colors duration-300 truncate",
-                    step.status === "completed" && "text-green-400",
-                    step.status === "active" && "text-neon-cyan",
+                    "text-xs font-black uppercase tracking-widest transition-colors duration-500",
+                    step.status === "completed" && "text-green-600",
+                    step.status === "active" && "text-blue-600",
                     step.status === "pending" && "text-slate-400",
                   )}
                 >
@@ -114,10 +109,8 @@ export default function DeploymentStepper({
                 </h3>
                 <p
                   className={cn(
-                    "text-xs mt-1 transition-colors duration-300",
-                    step.status === "completed" && "text-green-300/70",
-                    step.status === "active" && "text-neon-cyan/70",
-                    step.status === "pending" && "text-slate-500",
+                    "text-[10px] font-bold uppercase tracking-widest mt-1 opacity-60",
+                    step.status === "pending" ? "text-slate-500" : "text-slate-900 dark:text-slate-100",
                   )}
                 >
                   {step.description}
@@ -129,7 +122,7 @@ export default function DeploymentStepper({
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden sm:flex items-center justify-between mb-8">
+      <div className="hidden sm:flex items-center justify-between mb-12 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
         {updatedSteps.map((step, index) => {
           const Icon = step.icon;
           const isLast = index === updatedSteps.length - 1;
@@ -140,47 +133,35 @@ export default function DeploymentStepper({
                 {/* Step Circle */}
                 <div
                   className={cn(
-                    "relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
+                    "relative w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 shadow-md",
                     step.status === "completed" &&
-                      "bg-green-500 text-white shadow-lg shadow-green-500/30",
+                      "bg-green-600 border-green-600 text-white",
                     step.status === "active" &&
-                      "bg-neon-blue text-white shadow-lg shadow-neon-blue/50 animate-pulse",
+                      "bg-blue-600 border-blue-600 text-white animate-pulse",
                     step.status === "pending" &&
-                      "bg-slate-700 text-slate-400 border-2 border-slate-600",
+                      "bg-slate-50 dark:bg-slate-800 text-slate-300 border-slate-100 dark:border-slate-800",
                   )}
                 >
                   {step.status === "completed" ? (
-                    <Check className="w-6 h-6" />
+                    <Check className="w-7 h-7" />
                   ) : (
-                    <Icon className="w-6 h-6" />
-                  )}
-
-                  {/* Glowing effect for active step */}
-                  {step.status === "active" && (
-                    <div className="absolute inset-0 rounded-full bg-neon-blue animate-ping opacity-20" />
+                    <Icon className="w-7 h-7" />
                   )}
                 </div>
 
                 {/* Step Title */}
-                <div className="mt-3 text-center">
+                <div className="mt-4 text-center">
                   <h3
                     className={cn(
-                      "text-sm font-semibold transition-colors duration-300",
-                      step.status === "completed" && "text-green-400",
-                      step.status === "active" && "text-neon-cyan",
+                      "text-[10px] font-black uppercase tracking-widest transition-colors duration-500",
+                      step.status === "completed" && "text-green-600",
+                      step.status === "active" && "text-blue-600",
                       step.status === "pending" && "text-slate-400",
                     )}
                   >
                     {step.title}
                   </h3>
-                  <p
-                    className={cn(
-                      "text-xs mt-1 transition-colors duration-300",
-                      step.status === "completed" && "text-green-300/70",
-                      step.status === "active" && "text-neon-cyan/70",
-                      step.status === "pending" && "text-slate-500",
-                    )}
-                  >
+                  <p className="text-[9px] font-bold uppercase tracking-tighter text-slate-400 mt-1">
                     {step.description}
                   </p>
                 </div>
@@ -188,11 +169,11 @@ export default function DeploymentStepper({
 
               {/* Connector Line */}
               {!isLast && (
-                <div className="flex-1 mx-4">
+                <div className="flex-[0.5] mx-2">
                   <div
                     className={cn(
-                      "h-0.5 transition-colors duration-300",
-                      index < currentStep ? "bg-green-500" : "bg-slate-600",
+                      "h-0.5 rounded-full transition-all duration-1000",
+                      index < currentStep ? "bg-green-600" : "bg-slate-100 dark:bg-slate-800",
                     )}
                   />
                 </div>
