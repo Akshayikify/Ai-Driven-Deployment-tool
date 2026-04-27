@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 
 import { DeploymentProvider } from "@/context/DeploymentContext";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
