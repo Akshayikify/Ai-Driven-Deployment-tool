@@ -11,6 +11,7 @@ logger = setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Lifespan starting: initializing resources...")
     # Startup: Connect to MongoDB
     await db.connect_to_mongo()
     logger.info("Application startup complete.")

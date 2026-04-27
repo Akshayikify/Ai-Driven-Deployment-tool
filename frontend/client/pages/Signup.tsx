@@ -66,21 +66,31 @@ export default function Signup() {
         >
           <SignUp 
             appearance={{
+              variables: {
+                colorPrimary: "#00E5FF",
+                colorText: "white",
+                colorBackground: "#0f172a",
+                colorInputBackground: "#1e293b",
+                colorInputText: "white",
+                colorTextOnPrimaryBackground: "white",
+              },
               elements: {
                 formButtonPrimary: "bg-gradient-to-r from-neon-cyan to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-sm normal-case shadow-lg shadow-neon-cyan/20",
                 card: "bg-slate-900 border border-slate-800 shadow-2xl",
-                headerTitle: "text-white",
-                headerSubtitle: "text-slate-400",
+                headerTitle: "text-white text-2xl font-bold",
+                headerSubtitle: "text-slate-400 text-sm",
                 socialButtonsBlockButton: "bg-slate-800 border-slate-700 hover:bg-slate-700 text-white",
                 socialButtonsBlockButtonText: "text-white font-medium",
                 dividerLine: "bg-slate-800",
                 dividerText: "text-slate-500",
-                formFieldLabel: "text-slate-100 font-semibold",
-                formFieldInput: "bg-slate-800/50 border border-slate-600 text-white focus:border-neon-cyan focus:ring-2 focus:ring-neon-cyan/20 transition-all duration-200 hover:border-slate-500 backdrop-blur-sm",
-                footerActionText: "text-slate-200",
+                formFieldLabel: "text-slate-200 font-semibold mb-1",
+                formFieldInput: "bg-slate-800 border border-slate-700 text-white focus:border-neon-cyan focus:ring-2 focus:ring-neon-cyan/20 transition-all duration-200 hover:border-slate-600 py-2 px-4 h-11",
+                otpCodeFieldInput: "bg-slate-800 border border-slate-700 text-white text-xl font-bold focus:border-neon-cyan focus:ring-2 focus:ring-neon-cyan/20 transition-all duration-200 h-12",
+                formResendCodeActionText: "text-neon-cyan hover:text-cyan-300 font-medium",
+                footerActionText: "text-slate-300",
                 footerActionLink: "text-neon-cyan hover:text-cyan-300 font-bold",
-                identityPreviewText: "text-white",
-                identityPreviewEditButtonIcon: "text-neon-cyan"
+                identityPreviewText: "text-white font-medium",
+                identityPreviewEditButtonIcon: "text-neon-cyan",
               }
             }}
             signInUrl="/login"

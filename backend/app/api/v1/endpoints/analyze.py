@@ -76,16 +76,25 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
         t0 = time.time()
         findings = analysis_engine.analyze_directory(workspace)
         
-        # Store estimated duration in task manager
+        # Store estimated duration and language in task manager
+        update_kwargs = {"status": "analyzing"}
         if "estimated_duration" in findings:
-            task_manager.update_task(task_id, "analyzing", estimated_duration=findings["estimated_duration"])
+            update_kwargs["estimated_duration"] = findings["estimated_duration"]
+        if "language" in findings:
+            update_kwargs["language"] = findings["language"]
+            
+        task_manager.update_task(task_id, **update_kwargs)
 
         # AI Refinement if confidence is low
         if findings.get("confidence", 0) < 0.7:
             logger.info(f"Task {task_id}: Low confidence ({findings.get('confidence')}). Requesting AI refinement...")
             findings = await ai_service.refine_analysis(findings)
-        t_analyze = time.time() - t0
-        
+            # Update task again after refinement with potentially new language/framework
+            refine_kwargs = {"status": "analyzing"}
+            if "language" in findings: refine_kwargs["language"] = findings["language"]
+            if "estimated_duration" in findings: refine_kwargs["estimated_duration"] = findings["estimated_duration"]
+            task_manager.update_task(task_id, **refine_kwargs)
+            
         # 3. Generate Deployment Files
         task_manager.update_task(task_id, "generating")
         t0 = time.time()
@@ -124,12 +133,22 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
             from app.services.github_actions import github_actions_service
             asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id))
         else:    
-            task_manager.update_task(task_id, "completed")
+            update_kwargs = {"status": "completed"}
+            if 'findings' in locals():
+                if "language" in findings: update_kwargs["language"] = findings["language"]
+                if "estimated_duration" in findings: update_kwargs["estimated_duration"] = findings["estimated_duration"]
+            task_manager.update_task(task_id, **update_kwargs)
     except Exception as e:
         import traceback
         logger.error(f"Task {task_id} failed with exception: {e}")
         logger.error(traceback.format_exc())
-        task_manager.update_task(task_id, "failed", message=str(e))
+        fail_kwargs = {"status": "failed", "message": str(e)}
+        try:
+            if 'findings' in locals():
+                if "language" in findings: fail_kwargs["language"] = findings["language"]
+                if "estimated_duration" in findings: fail_kwargs["estimated_duration"] = findings["estimated_duration"]
+        except: pass
+        task_manager.update_task(task_id, **fail_kwargs)
         # Ensure cleanup on failure
         try:
             if 'workspace' in locals() and workspace:
