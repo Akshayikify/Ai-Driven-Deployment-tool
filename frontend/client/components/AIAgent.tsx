@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Bot, MessageCircle, Zap, Brain, Sparkles, Send, User, RefreshCw } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { cn } from "@/lib/utils";
 
 interface AIAgentProps {
@@ -22,6 +22,8 @@ interface Message {
 
 export default function AIAgent({ className }: AIAgentProps) {
   const { userId } = useAuth();
+  const { user } = useUser();
+  const hasGitHub = user?.externalAccounts?.some(account => account.provider === 'github');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -91,7 +93,7 @@ export default function AIAgent({ className }: AIAgentProps) {
       const agentResponse: Message = {
         id: Date.now().toString(),
         type: 'agent',
-        content: `### Repository Analysis Initiated\n\nI've detected a GitHub repository and started the automated analysis process.\n\n**Task Details:**\n- **ID:** \`${data.task_id}\`\n- **Status:** ⏳ Queued\n\n**Authentication:**\n${userId ? "-  **Token Authenticated via Account:** I will attempt to push changes back to the repository." : "- ℹ️ **No Account Linked:** I will only perform a local environment analysis."}\n\n---\n*You can monitor the progress in real-time using the **Deployment Logs** and **Timeline** cards below.*`,
+        content: `### Repository Analysis Initiated\n\nI've detected a GitHub repository and started the automated analysis process.\n\n**Task Details:**\n- **ID:** \`${data.task_id}\`\n- **Status:** ⏳ Queued\n\n**Authentication Status:**\n${hasGitHub ? "✅ **GitHub Linked:** I have access to your repository and can push automated deployment files." : "⚠️ **GitHub Not Linked:** I will perform a local analysis, but I won't be able to push changes or trigger CI/CD pipelines. Please connect your GitHub account in the dashboard for full automation."}\n\n---\n*You can monitor the progress in real-time using the **Deployment Logs** and **Timeline** cards below.*`,
         timestamp: new Date()
       };
 

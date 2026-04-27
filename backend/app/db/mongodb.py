@@ -9,16 +9,22 @@ class MongoDB:
     db = None
 
     async def connect_to_mongo(self):
-        logger.info("Connecting to MongoDB...")
+        logger.info(f"Connecting to MongoDB at {settings.MONGO_URI[:20]}...")
         try:
-            self.client = AsyncIOMotorClient(settings.MONGO_URI)
+            self.client = AsyncIOMotorClient(
+                settings.MONGO_URI,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=10000
+            )
             self.db = self.client[settings.MONGO_DB_NAME]
             # Verify connection
+            logger.info("Pinging MongoDB...")
             await self.client.admin.command('ping')
             logger.info("Successfully connected to MongoDB.")
         except Exception as e:
-            logger.error(f"Could not connect to MongoDB: {e}")
-            raise e
+            logger.error(f"Could not connect to MongoDB: {str(e)}")
+            # Don't raise here, allow the app to start so health check can show error
+            # raise e
 
     async def close_mongo_connection(self):
         logger.info("Closing MongoDB connection...")

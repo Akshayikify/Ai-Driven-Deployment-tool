@@ -3,12 +3,15 @@ import "./global.css";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { Toaster } from "@/components/ui/sonner";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Features from "./pages/Features";
 import Workflow from "./pages/Workflow";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 import { DeploymentProvider } from "@/context/DeploymentContext";
@@ -19,6 +22,7 @@ const App = () => (
     <DeploymentProvider>
       <BrowserRouter>
         <UserSync />
+        <Toaster richColors position="top-right" />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -26,6 +30,8 @@ const App = () => (
           <Route path="/workflow" element={<Workflow />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
