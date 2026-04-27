@@ -1,10 +1,9 @@
-# 🚀 AutoDeploy.ai - Intelligent AI-Driven Deployment Platform
+# AutoDeploy.ai - Intelligent AI-Driven Deployment Platform
 
 [![Frontend: React](https://img.shields.io/badge/Frontend-React%2018-blue?logo=react)](https://reactjs.org/)
 [![Backend: FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Auth: Clerk](https://img.shields.io/badge/Auth-Clerk-6C47FF?logo=clerk)](https://clerk.com/)
 [![Database: MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)](https://www.mongodb.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **AutoDeploy.ai** is a state-of-the-art, AI-powered SaaS platform that automates the entire DevOps lifecycle. From the moment you provide a GitHub URL, our intelligent agents analyze your code, generate production-ready Docker configurations, and orchestrate CI/CD pipelines—all without you writing a single line of YAML.
 
@@ -12,13 +11,13 @@
 
 ## ✨ Key Features
 
-- **🧠 Deep AI Analysis**: Automatically detects frameworks (React, Flask, Express, etc.) and analyzes project structure with high-confidence heuristics.
-- **🐳 Zero-Config Dockerization**: Generates optimized `Dockerfile` and `docker-compose.yml` assets tailored to your application's unique requirements.
-- **⚡ Automated CI/CD Pipelines**: Injects fully-functional GitHub Actions workflows into your repository to handle testing, linting, and building.
-- **🛰️ Live Monitoring**: Real-time streaming of GitHub Actions logs and deployment status directly into your dashboard via Server-Sent Events (SSE).
-- **🤖 LLM Fallback Engine**: If your language isn't natively supported, our integrated AI (Gemini/GPT) dynamically generates bespoke configurations for any stack (Rust, Go, Java, etc.).
-- **🔐 Enterprise-Grade Security**: Secure OAuth token management via Clerk, ensuring your GitHub credentials never touch the client-side.
-- **📊 Interactive Dashboard**: A sleek, professional management console for tracking deployments, analytics, and infrastructure health.
+- **Deep AI Analysis**: Automatically detects frameworks (React, Flask, Express, etc.) and analyzes project structure with high-confidence heuristics.
+- **Zero-Config Dockerization**: Generates optimized `Dockerfile` and `docker-compose.yml` assets tailored to your application's unique requirements.
+- **Automated CI/CD Pipelines**: Injects fully-functional GitHub Actions workflows into your repository to handle testing, linting, and building.
+- **Live Monitoring**: Real-time streaming of GitHub Actions logs and deployment status directly into your dashboard via Server-Sent Events (SSE).
+- **LLM Fallback Engine**: If your language isn't natively supported, our integrated AI (Gemini/GPT) dynamically generates bespoke configurations for any stack (Rust, Go, Java, etc.).
+- **Enterprise-Grade Security**: Secure OAuth token management via Clerk, ensuring your GitHub credentials never touch the client-side.
+- **Interactive Dashboard**: A sleek, professional management console for tracking deployments, analytics, and infrastructure health.
 
 ---
 
@@ -39,7 +38,7 @@
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Python 3.10+
