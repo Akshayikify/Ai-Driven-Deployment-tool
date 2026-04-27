@@ -1,4 +1,4 @@
-# AutoDeploy.ai - Intelligent AI-Driven Deployment Platform
+# AutoDeployment Tool - Intelligent AI-Driven Deployment Platform
 
 [![Frontend: React](https://img.shields.io/badge/Frontend-React%2018-blue?logo=react)](https://reactjs.org/)
 [![Backend: FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
