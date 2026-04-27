@@ -1,142 +1,75 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform, useInView } from "framer-motion";
-import { useRef } from "react";
+import { motion } from "framer-motion";
+import { Rocket, Calendar, Shield, Zap, Heart } from "lucide-react";
 
 export default function CTASection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"]
-  });
-
-  const y = useTransform(scrollYProgress, [0, 1], [20, -20]);
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
   const navigate = useNavigate();
 
   const handleStartTrial = () => {
-    navigate('/dashboard');
-  };
-
-  const buttonVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
-  const trustVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { opacity: 1, scale: 1 }
+    navigate('/signup');
   };
 
   return (
-    <motion.section
-      ref={sectionRef}
-      className="py-24 bg-background relative overflow-hidden"
-      style={{ y, opacity }}
-    >
-      {/* Animated background elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-float"></div>
-        <div
-          className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-white/5 rounded-full blur-3xl animate-float"
-          style={{ animationDelay: "2s" }}
-        ></div>
-        <div
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float"
-          style={{ animationDelay: "1s" }}
-        ></div>
+    <section className="py-24 bg-slate-900 relative overflow-hidden">
+      {/* Subtle Pattern Background */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
       </div>
 
-      {/* Floating 3D Elements */}
-      <div className="absolute top-20 left-10 w-16 h-16 bg-white/20 rounded-xl transform rotate-12 animate-float shadow-2xl"></div>
-      <div
-        className="absolute top-32 right-20 w-12 h-12 bg-white/15 rounded-full animate-float shadow-2xl"
-        style={{ animationDelay: "1.5s" }}
-      ></div>
-      <div
-        className="absolute bottom-20 left-20 w-20 h-20 bg-white/10 rounded-2xl transform -rotate-12 animate-float shadow-2xl"
-        style={{ animationDelay: "0.5s" }}
-      ></div>
-      <div
-        className="absolute bottom-32 right-10 w-14 h-14 bg-white/25 rounded-lg transform rotate-45 animate-float shadow-2xl"
-        style={{ animationDelay: "2.5s" }}
-      ></div>
-
-      <div className="container mx-auto px-6 text-center relative z-10">
+      <div className="container mx-auto px-6 text-center relative z-10 max-w-7xl">
         <div className="max-w-4xl mx-auto">
-          {/* Main CTA Heading */}
-          <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 text-black dark:text-white leading-tight">
-            Deploy Smarter
-            <br />
-            <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-              with AI Today!
-            </span>
-          </h2>
-
-          <p className="text-xl md:text-2xl text-black/90 dark:text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Join thousands of developers and DevOps teams who have already
-            transformed their deployment workflows. Experience the future of
-            automated deployments with zero configuration.
-          </p>
-
-          {/* CTA Buttons */}
           <motion.div
-            className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            variants={{ visible: { transition: { staggerChildren: 0.2 } } }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
           >
-            <motion.div variants={buttonVariants}>
+            <h2 className="text-4xl md:text-6xl font-extrabold mb-8 text-white leading-tight tracking-tight">
+              Ready to ship <span className="text-blue-400">faster?</span>
+            </h2>
+
+            <p className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+              Join the growing number of teams who use AutoDeploy.ai to automate their 
+              infrastructure and focus on what matters most—their code.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
               <Button
                 size="lg"
                 onClick={handleStartTrial}
-                className="text-xl px-12 py-8 bg-white text-brand-700 hover:bg-gray-100 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 font-bold"
+                className="w-full sm:w-auto h-14 px-10 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-xl shadow-xl shadow-blue-600/20 transition-all"
               >
-                Start Free Trial
-                <span className="ml-3 text-2xl">🚀</span>
+                Get Started for Free
               </Button>
-            </motion.div>
-            <motion.div variants={buttonVariants}>
               <Button
                 size="lg"
                 variant="outline"
-                className="text-xl px-12 py-8 border-2 border-black dark:border-white text-black dark:text-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-brand-700 shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 font-bold"
+                onClick={handleStartTrial}
+                className="w-full sm:w-auto h-14 px-10 border-slate-700 text-white hover:bg-slate-800 font-bold text-lg rounded-xl transition-all"
               >
-                Request a Demo
-                <span className="ml-3 text-2xl">📺</span>
+                Schedule a Demo
               </Button>
-            </motion.div>
+            </div>
           </motion.div>
 
-          {/* Trust Indicators */}
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12"
-            initial="hidden"
-            whileInView="visible"
-            variants={{ visible: { transition: { staggerChildren: 0.3 } } }}
-          >
-            <motion.div variants={trustVariants} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              <div className="text-3xl font-bold text-black dark:text-white mb-2">
-                Free Forever
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { icon: <Shield className="w-5 h-5" />, title: "Enterprise Grade", desc: "SOC2 Type II Compliant" },
+              { icon: <Zap className="w-5 h-5" />, title: "Instant Setup", desc: "No configuration needed" },
+              { icon: <Heart className="w-5 h-5" />, title: "Dev Centric", desc: "Built by engineers, for engineers" },
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50">
+                <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-blue-400 mb-4">
+                  {item.icon}
+                </div>
+                <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-widest">{item.title}</h4>
+                <p className="text-xs text-slate-500 font-medium">{item.desc}</p>
               </div>
-              <div className="text-black/80 dark:text-white/80">No credit card required</div>
-            </motion.div>
-            <motion.div variants={trustVariants} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              <div className="text-3xl font-bold text-black dark:text-white mb-2">
-                5-Min Setup
-              </div>
-              <div className="text-black/80 dark:text-white/80">Deploy in minutes, not hours</div>
-            </motion.div>
-            <motion.div variants={trustVariants} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              <div className="text-3xl font-bold text-black dark:text-white mb-2">
-                24/7 Support
-              </div>
-              <div className="text-black/80 dark:text-white/80">Expert help when you need it</div>
-            </motion.div>
-          </motion.div>
-
+            ))}
+          </div>
         </div>
       </div>
-    </motion.section>
+    </section>
   );
 }

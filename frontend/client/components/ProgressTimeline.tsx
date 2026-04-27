@@ -32,11 +32,11 @@ export default function ProgressTimeline({
                 className={cn(
                   "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300",
                   step.status === "completed" &&
-                    "bg-green-500 border-green-500 text-white",
+                    "bg-green-600 border-green-600 text-white shadow-sm",
                   step.status === "active" &&
-                    "bg-neon-blue border-neon-cyan text-white shadow-lg shadow-neon-blue/30",
+                    "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20",
                   step.status === "pending" &&
-                    "bg-slate-700 border-slate-600 text-slate-400",
+                    "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400",
                 )}
               >
                 {step.status === "completed" && (
@@ -54,8 +54,8 @@ export default function ProgressTimeline({
                   className={cn(
                     "w-0.5 h-12 mt-2 transition-colors duration-300",
                     step.status === "completed"
-                      ? "bg-green-500"
-                      : "bg-slate-600",
+                      ? "bg-green-600"
+                      : "bg-slate-200 dark:bg-slate-800",
                   )}
                 />
               )}
@@ -66,16 +66,16 @@ export default function ProgressTimeline({
               <div className="flex items-center justify-between">
                 <h4
                   className={cn(
-                    "font-semibold transition-colors duration-300",
-                    step.status === "completed" && "text-green-400",
-                    step.status === "active" && "text-neon-cyan",
-                    step.status === "pending" && "text-slate-300",
+                    "text-sm font-bold transition-colors duration-300 uppercase tracking-tight",
+                    step.status === "completed" && "text-green-700 dark:text-green-500",
+                    step.status === "active" && "text-blue-700 dark:text-blue-400",
+                    step.status === "pending" && "text-slate-500 dark:text-slate-400",
                   )}
                 >
                   {step.title}
                 </h4>
                 {step.timestamp && (
-                  <span className="text-xs text-slate-500">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">
                     {step.timestamp}
                   </span>
                 )}
@@ -83,10 +83,10 @@ export default function ProgressTimeline({
 
               <p
                 className={cn(
-                  "text-sm mt-1 transition-colors duration-300",
-                  step.status === "completed" && "text-green-300/70",
-                  step.status === "active" && "text-neon-cyan/70",
-                  step.status === "pending" && "text-slate-400",
+                  "text-xs mt-1 transition-colors duration-300 font-medium",
+                  step.status === "completed" && "text-slate-500 dark:text-slate-400",
+                  step.status === "active" && "text-slate-700 dark:text-slate-300",
+                  step.status === "pending" && "text-slate-400 dark:text-slate-500",
                 )}
               >
                 {step.description}
@@ -95,9 +95,9 @@ export default function ProgressTimeline({
               {/* Progress bar for active step */}
               {step.status === "active" && (
                 <div className="mt-3">
-                  <div className="w-full bg-slate-700 rounded-full h-2">
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-200 dark:border-slate-700">
                     <div
-                      className="bg-neon-blue h-2 rounded-full animate-pulse"
+                      className="bg-blue-600 h-full rounded-full animate-pulse"
                       style={{ width: "60%" }}
                     />
                   </div>

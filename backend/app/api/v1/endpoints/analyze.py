@@ -73,8 +73,9 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
 
         # 2. Analyze
         task_manager.update_task(task_id, "analyzing")
-        t0 = time.time()
+        t0_analyze = time.time()
         findings = analysis_engine.analyze_directory(workspace)
+        t_analyze = time.time() - t0_analyze
         
         # Store estimated duration and language in task manager
         update_kwargs = {"status": "analyzing"}
@@ -97,18 +98,18 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
             
         # 3. Generate Deployment Files
         task_manager.update_task(task_id, "generating")
-        t0 = time.time()
+        t0_gen = time.time()
         await file_generator.generate_deployment_files(workspace, findings)
-        t_generate = time.time() - t0
+        t_generate = time.time() - t0_gen
 
         # 4. Push changes if token provided
         t_push = 0
         if github_token:
             task_manager.update_task(task_id, "pushing")
             logger.info(f"Task {task_id}: Attempting to push changes...")
-            t0 = time.time()
+            t0_push = time.time()
             repo_service.push_changes(workspace)
-            t_push = time.time() - t0
+            t_push = time.time() - t0_push
 
         # 5. Cleanup
         repo_service.cleanup_workspace(workspace)

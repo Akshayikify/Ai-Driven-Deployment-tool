@@ -1,310 +1,208 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Activity, Terminal, BrainCircuit, CheckCircle2, AlertCircle, Zap } from "lucide-react";
 
 export default function DashboardSection() {
   const [activeTab, setActiveTab] = useState(0);
-  const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"]
-  });
-
-  const y = useTransform(scrollYProgress, [0, 1], [50, -50]);
-  const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
 
   const dashboardViews = [
     {
-      title: "Deployment Pipeline",
-      description:
-        "Visualize your entire deployment process with real-time status updates",
+      title: "Pipeline Overview",
+      description: "Manage and monitor your entire deployment lifecycle from a single, unified interface.",
+      icon: <Activity className="w-5 h-5" />,
       features: [
-        "Live status tracking",
-        "Automated rollbacks",
-        "Multi-environment support",
+        "Real-time deployment tracking",
+        "Automated failure rollbacks",
+        "Multi-environment synchronization",
       ],
     },
     {
-      title: "Logs Monitoring",
-      description:
-        "Intelligent log aggregation with AI-powered error detection and filtering",
+      title: "Intelligent Logs",
+      description: "Smart log aggregation with AI-powered error surfacing and contextual analysis.",
+      icon: <Terminal className="w-5 h-5" />,
       features: [
-        "Real-time log streaming",
-        "Smart filtering",
-        "Error highlighting",
+        "Live streaming at scale",
+        "Predictive error highlighting",
+        "Contextual search & filtering",
       ],
     },
     {
-      title: "AI Insights",
-      description:
-        "Predictive analytics and intelligent recommendations for optimal performance",
+      title: "AI Optimization",
+      description: "Receive proactive recommendations to improve performance and reduce costs.",
+      icon: <BrainCircuit className="w-5 h-5" />,
       features: [
-        "Performance predictions",
-        "Config suggestions",
-        "Resource optimization",
+        "Auto-scaling predictions",
+        "Resource allocation optimization",
+        "Security vulnerability audits",
       ],
     },
   ];
 
   return (
-    <motion.section
-      ref={sectionRef}
-      className="py-24 bg-background relative overflow-hidden"
-      style={{ y, opacity }}
-    >
-      <div className="container mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-5xl md:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-brand-600 to-purple-600 bg-clip-text text-transparent">
-              Dashboard Preview
-            </span>
-          </h2>
-          <p className="text-xl text-gray-600 dark:text-white max-w-3xl mx-auto">
-            Experience the power of AI-driven deployment management through our
-            intuitive dashboard
+    <section className="py-24 bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 overflow-hidden">
+      <div className="container mx-auto px-6 max-w-7xl">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <h2 className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-3">Intuitive Interface</h2>
+          <h3 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">
+            Control center for your <span className="text-blue-600">infrastructure</span>
+          </h3>
+          <p className="text-lg text-slate-600 dark:text-slate-400">
+            A professional workspace designed for clarity, speed, and absolute control over 
+            your production environments.
           </p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex flex-wrap justify-center mb-12 gap-4">
+        <div className="flex flex-wrap justify-center mb-16 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-2xl w-fit mx-auto border border-slate-200 dark:border-slate-800">
           {dashboardViews.map((view, index) => (
-            <Button
+            <button
               key={index}
-              variant={activeTab === index ? "default" : "outline"}
               onClick={() => setActiveTab(index)}
-              className={`text-lg px-6 py-3 transition-all duration-300 ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
                 activeTab === index
-                  ? "bg-gradient-to-r from-brand-500 to-brand-700 text-white shadow-lg"
-                  : "border-brand-200 text-brand-600 hover:bg-brand-50"
+                  ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200 dark:border-slate-700"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
             >
+              {view.icon}
               {view.title}
-            </Button>
+            </button>
           ))}
         </div>
 
-        {/* Dashboard Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left Side - Info */}
-          <div className="space-y-6">
-            <h3 className="text-4xl font-bold text-gray-900 dark:text-white">
-              {dashboardViews[activeTab].title}
-            </h3>
-            <p className="text-xl text-gray-600 dark:text-white leading-relaxed">
-              {dashboardViews[activeTab].description}
-            </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          {/* Info Side */}
+          <div className="order-2 lg:order-1">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-6">
+                  {dashboardViews[activeTab].title}
+                </h3>
+                <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                  {dashboardViews[activeTab].description}
+                </p>
 
-            <ul className="space-y-3">
-              {dashboardViews[activeTab].features.map((feature, index) => (
-                <li key={index} className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-gradient-to-r from-brand-500 to-brand-700 rounded-full"></div>
-                  <span className="text-gray-700 dark:text-white">{feature}</span>
-                </li>
-              ))}
-            </ul>
-
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {dashboardViews[activeTab].features.map((feature, i) => (
+                    <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
-          {/* Right Side - Dashboard Mockup */}
-          <div className="relative">
-            {/* Browser Window Frame */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transform hover:scale-105 transition-transform duration-500">
-              {/* Browser Header */}
-              <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 flex items-center space-x-2 border-b border-gray-200 dark:border-gray-600">
-                <div className="flex space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          {/* Browser Mockup Side */}
+          <div className="order-1 lg:order-2">
+            <div className="bg-slate-200 dark:bg-slate-800 p-2 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-inner h-[400px]">
+                {/* Browser Header */}
+                <div className="bg-slate-50 dark:bg-slate-800 px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center gap-4">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                    <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                    <div className="w-3 h-3 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-[10px] text-slate-400 font-mono w-full max-w-[200px]">
+                    app.autodeploy.ai/dashboard
+                  </div>
                 </div>
-                <div className="flex-1 bg-white dark:bg-gray-200 rounded px-3 py-1 text-sm text-gray-600 dark:text-gray-800 ml-4">
-                  autodeploy.ai/dashboard
+
+                {/* Content View */}
+                <div className="p-6 h-full overflow-y-auto">
+                  {activeTab === 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Active Deployments</h4>
+                        <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">LIVE STATUS</span>
+                      </div>
+                      {[
+                        { name: "Frontend Cluster", status: "Active", progress: 100, color: "bg-blue-600" },
+                        { name: "Payments API", status: "Deploying", progress: 75, color: "bg-blue-500", animated: true },
+                        { name: "Worker Service", status: "Queued", progress: 0, color: "bg-slate-200" },
+                      ].map((item, i) => (
+                        <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{item.name}</span>
+                            <span className={`text-[10px] font-black uppercase ${item.status === 'Active' ? 'text-green-600' : 'text-blue-600'}`}>{item.status}</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${item.progress}%` }}
+                              className={`h-full ${item.color} ${item.animated ? 'animate-pulse' : ''}`}
+                            ></motion.div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeTab === 1 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Stream Monitor</h4>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></div>
+                          <span className="text-[10px] font-black text-red-500 uppercase">LIVE</span>
+                        </div>
+                      </div>
+                      <div className="bg-slate-950 rounded-xl p-4 font-mono text-[11px] leading-relaxed h-[250px] overflow-hidden border border-slate-800">
+                        <p className="text-slate-500 mb-1">{"[09:42:12] INFO: Connecting to K8s cluster..."}</p>
+                        <p className="text-blue-400 mb-1">{"[09:42:13] DEBUG: Pulling image version v2.4.1"}</p>
+                        <p className="text-slate-500 mb-1">{"[09:42:15] INFO: Validating configuration maps"}</p>
+                        <p className="text-green-400 mb-1">{"[09:42:16] SUCCESS: Service mesh integration verified"}</p>
+                        <p className="text-amber-400 mb-1">{"[09:42:18] WARNING: Memory pressure high in node-02"}</p>
+                        <p className="text-blue-400 mb-1">{"[09:42:19] DEBUG: Auto-healing triggered"}</p>
+                        <p className="text-slate-500 mb-1 italic">{"[09:42:20] AI_AGENT: Optimized memory limits for pod..."}</p>
+                        <p className="text-green-400 animate-pulse">{"[09:42:21] SUCCESS: New deployment healthy ✓"}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 2 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">AI Insight Engine</h4>
+                        <Zap className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="space-y-3">
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/30">
+                          <div className="flex gap-3">
+                            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-bold text-blue-900 dark:text-blue-200 mb-1">Scaling Alert</p>
+                              <p className="text-[11px] text-blue-700 dark:text-blue-400">Traffic predicted to spike by 300% in next hour. Increased cluster size by 2 nodes.</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                          <div className="flex gap-3">
+                            <BrainCircuit className="w-5 h-5 text-slate-400 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-bold text-slate-900 dark:text-white mb-1">Cost Optimization</p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400">Identified 3 underutilized instances. Consolidating workloads could save $420/month.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              {/* Dashboard Content */}
-              <div className="p-6 h-80 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700">
-                {activeTab === 0 && (
-                  // Deployment Pipeline View
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-800">
-                        Current Deployments
-                      </h4>
-                      <div className="flex space-x-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm text-gray-600 dark:text-white">3 Active</span>
-                      </div>
-                    </div>
-
-                    {/* Pipeline Steps */}
-                    <div className="space-y-3">
-                      <div className="bg-white rounded-lg p-3 shadow-sm border-l-4 border-green-500">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm dark:text-white">
-                            Frontend App
-                          </span>
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                            Deployed
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div className="bg-green-500 h-2 rounded-full w-full"></div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-lg p-3 shadow-sm border-l-4 border-blue-500">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm dark:text-white">
-                            API Service
-                          </span>
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                            Deploying
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div className="bg-blue-500 h-2 rounded-full w-3/4 animate-pulse"></div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white rounded-lg p-3 shadow-sm border-l-4 border-yellow-500">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm dark:text-white">
-                            Database Migration
-                          </span>
-                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
-                            Queued
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div className="bg-yellow-500 h-2 rounded-full w-1/4"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 1 && (
-                  // Logs Monitoring View
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-800">Live Logs</h4>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm text-gray-600 dark:text-white">Live</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-green-400 h-56 overflow-y-auto">
-                      <div className="space-y-1">
-                        <div className="text-gray-500">
-                          [2024-01-15 14:32:15] INFO: Starting deployment
-                          process...
-                        </div>
-                        <div className="text-blue-400">
-                          [2024-01-15 14:32:16] DEBUG: Loading configuration...
-                        </div>
-                        <div className="text-green-400">
-                          [2024-01-15 14:32:17] SUCCESS: Container built
-                          successfully
-                        </div>
-                        <div className="text-yellow-400">
-                          [2024-01-15 14:32:18] WARN: High memory usage detected
-                        </div>
-                        <div className="text-green-400">
-                          [2024-01-15 14:32:19] INFO: Deploying to production...
-                        </div>
-                        <div className="text-red-400">
-                          [2024-01-15 14:32:20] ERROR: Connection timeout
-                        </div>
-                        <div className="text-blue-400">
-                          [2024-01-15 14:32:21] INFO: Retrying connection...
-                        </div>
-                        <div className="text-green-400 animate-pulse">
-                          [2024-01-15 14:32:22] SUCCESS: Deployment completed ✓
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 2 && (
-                  // AI Insights View
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-gray-800">
-                        AI Recommendations
-                      </h4>
-                      <div className="w-6 h-6 bg-gradient-to-r from-brand-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs">🤖</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-white text-xs">💡</span>
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-blue-900 mb-1">
-                              Scaling Recommendation
-                            </h5>
-                            <p className="text-sm text-blue-700">
-                              Predicted config update needed for scaling.
-                              Consider increasing memory allocation by 25%.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-white text-xs">⚡</span>
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-green-900 mb-1">
-                              Performance Optimization
-                            </h5>
-                            <p className="text-sm text-green-700">
-                              Database queries can be optimized. Implementing
-                              caching could improve response time by 40%.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <span className="text-white text-xs">🔒</span>
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-purple-900 mb-1">
-                              Security Alert
-                            </h5>
-                            <p className="text-sm text-purple-700">
-                              Outdated dependency detected. Update recommended
-                              for security patch.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
-
-            {/* Floating Elements */}
-            <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-full animate-float"></div>
-            <div
-              className="absolute -bottom-4 -left-4 w-6 h-6 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full animate-float"
-              style={{ animationDelay: "1s" }}
-            ></div>
           </div>
         </div>
       </div>
-    </motion.section>
+    </section>
   );
 }
