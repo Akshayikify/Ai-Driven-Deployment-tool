@@ -16,15 +16,7 @@ export default function Header() {
 
   const handleNavClick = (section: string) => {
     if (section === 'contact') {
-      if (window.location.pathname !== '/') {
-        navigate('/#contact');
-        // The scroll might need a moment or handle via Index.tsx
-      } else {
-        const contactSection = document.getElementById('contact');
-        if (contactSection) {
-          contactSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
+      navigate('/contact');
     } else if (section === 'features') {
       navigate('/features');
     } else if (section === 'workflow') {
