@@ -37,6 +37,8 @@ app.add_middleware(
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "https://ai-driven-deployment-tool-k44y.vercel.app",
+        "https://ai-driven-deployment-tool.vercel.app",
+        "https://ai-driven-deployment-tool-rck7vxw75-akshayikifys-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
