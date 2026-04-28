@@ -3,6 +3,7 @@ from loguru import logger
 from app.core.config import settings
 from .ai_providers.gemini_provider import GeminiProvider
 from .ai_providers.openrouter_provider import OpenRouterProvider
+from .ai_providers.groq_provider import GroqProvider
 from .ai_providers.base import AIProvider
 
 class AIService:
@@ -10,7 +11,10 @@ class AIService:
         self.providers: List[AIProvider] = []
         
         # Initialize providers based on available keys
-        # We prioritize OpenRouter if provided, as it's often more flexible
+        # We prioritize Groq for its extreme speed and stability
+        if settings.GROQ_API_KEY:
+            self.providers.append(GroqProvider(settings.GROQ_API_KEY))
+        
         if settings.OPENROUTER_API_KEY:
             self.providers.append(OpenRouterProvider(settings.OPENROUTER_API_KEY))
         
