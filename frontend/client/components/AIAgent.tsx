@@ -71,8 +71,9 @@ export default function AIAgent({ className }: AIAgentProps) {
     setIsTyping(true);
     setCurrentTask("Analyzing repository structure...");
 
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/v1/analyze/analyze", {
+      const response = await fetch(`${baseUrl}/api/v1/analyze/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -133,8 +134,9 @@ export default function AIAgent({ className }: AIAgentProps) {
     setIsTyping(true);
     setCurrentTask("Thinking...");
 
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/v1/chat", {
+      const response = await fetch(`${baseUrl}/api/v1/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: inputValue }),

@@ -71,11 +71,12 @@ export default function AdminDashboard() {
     const fetchData = async () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
         
         const [statsRes, usersRes, depsRes] = await Promise.all([
-          fetch("http://127.0.0.1:8000/api/v1/admin/stats", { headers }),
-          fetch("http://127.0.0.1:8000/api/v1/admin/users", { headers }),
-          fetch("http://127.0.0.1:8000/api/v1/admin/deployments", { headers })
+          fetch(`${baseUrl}/api/v1/admin/stats`, { headers }),
+          fetch(`${baseUrl}/api/v1/admin/users`, { headers }),
+          fetch(`${baseUrl}/api/v1/admin/deployments`, { headers })
         ]);
 
         if (statsRes.status === 401) {

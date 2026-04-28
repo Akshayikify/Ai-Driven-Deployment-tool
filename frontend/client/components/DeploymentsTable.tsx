@@ -78,7 +78,8 @@ export default function DeploymentsTable({ className }: DeploymentsTableProps) {
   const fetchDeployments = async () => {
     if (!userId) return;
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/analyze/tasks?user_id=${userId}`);
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+      const response = await fetch(`${baseUrl}/api/v1/analyze/tasks?user_id=${userId}`);
       if (response.ok) {
         const data = await response.json();
         setDeployments(data);

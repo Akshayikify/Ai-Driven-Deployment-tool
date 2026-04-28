@@ -9,7 +9,8 @@ export default function UserSync() {
       const syncUser = async () => {
         try {
           console.log("Syncing user to MongoDB:", user.id);
-          const response = await fetch(`http://127.0.0.1:8000/api/v1/auth/sync-user?clerk_id=${user.id}`, {
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+          const response = await fetch(`${baseUrl}/api/v1/auth/sync-user?clerk_id=${user.id}`, {
             method: "POST",
           });
           

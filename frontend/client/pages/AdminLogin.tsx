@@ -21,7 +21,8 @@ export default function AdminLogin() {
       formData.append("username", username);
       formData.append("password", password);
 
-      const response = await fetch("http://127.0.0.1:8000/api/v1/admin/login", {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+      const response = await fetch(`${baseUrl}/api/v1/admin/login`, {
         method: "POST",
         body: formData,
       });
