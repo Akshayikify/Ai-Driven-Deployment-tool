@@ -11,8 +11,8 @@ class GroqProvider(AIProvider):
                 base_url="https://api.groq.com/openai/v1",
                 api_key=self.api_key,
             )
-            # Using Llama 3.1 70B for high quality and speed
-            self.model = "llama-3.1-70b-versatile" 
+            # Using the latest Llama 3.3 70B model
+            self.model = "llama-3.3-70b-versatile" 
             logger.info("GroqProvider initialized.")
         except Exception as e:
             logger.error(f"Failed to initialize GroqProvider: {e}")
