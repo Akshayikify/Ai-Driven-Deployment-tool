@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     GOOGLE_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
     CLERK_SECRET_KEY: str = ""
     
     # Admin Credentials
