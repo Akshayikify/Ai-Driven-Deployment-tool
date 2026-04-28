@@ -33,7 +33,8 @@ export default function LogMonitoringCard({ className }: { className?: string })
     }, [logs]);
 
     useEffect(() => {
-        const eventSource = new EventSource("http://127.0.0.1:8000/api/v1/logs/stream");
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+        const eventSource = new EventSource(`${baseUrl}/api/v1/logs/stream`);
 
         eventSource.onmessage = (event) => {
             const logText = event.data;
@@ -77,7 +78,8 @@ export default function LogMonitoringCard({ className }: { className?: string })
         if (!repoUrl || !userId) return;
         setIsFixing(true);
         try {
-            const res = await fetch("http://127.0.0.1:8000/api/v1/analyze/auto-fix", {
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+            const res = await fetch(`${baseUrl}/api/v1/analyze/auto-fix`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ repo_url: repoUrl, user_id: userId, actions })

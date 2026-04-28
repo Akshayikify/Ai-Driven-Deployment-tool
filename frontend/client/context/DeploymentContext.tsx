@@ -66,7 +66,8 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
         if (activeTaskId) {
             const pollStatus = async () => {
                 try {
-                    const response = await fetch(`http://127.0.0.1:8000/api/v1/analyze/status/${activeTaskId}`);
+                    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+                    const response = await fetch(`${baseUrl}/api/v1/analyze/status/${activeTaskId}`);
                     if (response.ok) {
                         const data = await response.json();
                         setSteps(data.steps);
