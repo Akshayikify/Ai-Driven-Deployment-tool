@@ -51,6 +51,12 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --neon-blue: 217 91% 60%;
+    --neon-purple: 270 91% 60%;
+    --neon-cyan: 180 100% 50%;
+    --neon-pink: 330 100% 70%;
+    --neon-green: 120 100% 50%;
   }
 
   .dark {
@@ -90,6 +96,12 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --neon-blue: 217 91% 60%;
+    --neon-purple: 270 91% 60%;
+    --neon-cyan: 180 100% 50%;
+    --neon-pink: 330 100% 70%;
+    --neon-green: 120 100% 50%;
   }
 }
 

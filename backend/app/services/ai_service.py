@@ -121,9 +121,9 @@ class AIService:
 
         context_hint = f" The original workflow filename was identified as: {workflow_path}." if workflow_path else ""
 
-        prompt = f"""
+        prompt = rf"""
         You are an expert DevOps engineer and AI assistant. The following are the raw terminal logs from a failed GitHub Actions CI/CD pipeline run for the repository: {repo_url}.{context_hint}
-
+        
         <logs>
         {truncated_logs}
         </logs>
