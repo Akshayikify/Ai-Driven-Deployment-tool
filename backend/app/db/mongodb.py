@@ -13,8 +13,8 @@ class MongoDB:
         try:
             self.client = AsyncIOMotorClient(
                 settings.MONGO_URI,
-                serverSelectionTimeoutMS=5000,
-                connectTimeoutMS=10000
+                serverSelectionTimeoutMS=10000,
+                connectTimeoutMS=20000
             )
             self.db = self.client[settings.MONGO_DB_NAME]
             # Verify connection
