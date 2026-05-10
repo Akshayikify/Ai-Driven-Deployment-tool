@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # Environment
     DEBUG: bool = False
     GOOGLE_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-flash-latest"
     OPENROUTER_API_KEY: str = ""
     GROQ_API_KEY: str = ""
     CLERK_SECRET_KEY: str = ""
