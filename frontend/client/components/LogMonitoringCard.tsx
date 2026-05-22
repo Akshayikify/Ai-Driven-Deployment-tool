@@ -21,10 +21,20 @@ export default function LogMonitoringCard({ className }: { className?: string })
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [isFixing, setIsFixing] = useState(false);
 
-    const { repoUrl } = useDeployment();
+    const { repoUrl, sessionKey, activeTaskId, autoFix } = useDeployment();
     const { userId } = useAuth();
 
     const scrollRef = useRef<HTMLDivElement>(null);
+    // Track previous sessionKey so we only clear on actual changes, not mount
+    const prevSessionKey = useRef(sessionKey);
+
+    // Clear logs when user starts a new session
+    useEffect(() => {
+        if (sessionKey !== prevSessionKey.current) {
+            prevSessionKey.current = sessionKey;
+            setLogs([]);
+        }
+    }, [sessionKey]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -82,7 +92,7 @@ export default function LogMonitoringCard({ className }: { className?: string })
             const res = await fetch(`${baseUrl}/api/v1/analyze/auto-fix`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ repo_url: repoUrl, user_id: userId, actions })
+                body: JSON.stringify({ repo_url: repoUrl, user_id: userId, actions, task_id: activeTaskId })
             });
             if (res.ok) {
                 setLogs(prev => [...prev, {
@@ -168,7 +178,30 @@ export default function LogMonitoringCard({ className }: { className?: string })
                         )}
                     </div>
                 ))}
-                {logs.length === 0 && (
+                {autoFix && autoFix.actions && autoFix.actions.length > 0 && !logs.some(l => l.autoFix) && (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex gap-4">
+                            <span className="text-slate-600 flex-shrink-0 font-medium">[{new Date().toLocaleTimeString('en-US', { hour12: false })}]</span>
+                            <span className="font-black flex-shrink-0 uppercase tracking-tighter w-12 text-blue-500">info</span>
+                            <span className="text-slate-300 break-all font-medium">[AI DevOps Agent] 💡 Diagnosis: {autoFix.diagnosis}</span>
+                        </div>
+                        <div className="ml-16 mt-1 mb-2 flex flex-col gap-2">
+                            <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 max-w-lg">
+                                <p className="text-[10px] text-blue-400 font-bold uppercase mb-2">AI-Driven Solution Available</p>
+                                <Button
+                                    size="sm"
+                                    onClick={() => applyAutoFix(autoFix.actions)}
+                                    disabled={isFixing}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] h-8 px-4 font-bold shadow-sm"
+                                >
+                                    <Zap className="w-3.5 h-3.5 mr-2" />
+                                    {isFixing ? "Processing..." : "Deploy Automatic Fix"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {logs.length === 0 && !autoFix && (
                     <div className="flex items-center justify-center h-full text-slate-600 font-mono text-xs">
                         Waiting for log stream...
                     </div>

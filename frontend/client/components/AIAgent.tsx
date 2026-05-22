@@ -4,10 +4,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, MessageCircle, Zap, Brain, Sparkles, Send, User, RefreshCw } from "lucide-react";
+import { Bot, MessageCircle, Zap, Brain, Sparkles, Send, User, Plus } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface AIAgentProps {
   className?: string;
@@ -38,7 +39,7 @@ export default function AIAgent({ className }: AIAgentProps) {
   const [currentTask, setCurrentTask] = useState("Ready to assist with your deployment...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { setActiveTaskId, setRepoUrl } = useDeployment();
+  const { setActiveTaskId, setRepoUrl, resetSession } = useDeployment();
 
   const agentCapabilities = [
     { icon: Brain, label: "Code Analysis", status: "active" },
@@ -46,7 +47,10 @@ export default function AIAgent({ className }: AIAgentProps) {
     { icon: Sparkles, label: "AI Insights", status: "ready" },
   ];
 
-  const clearChat = () => {
+  const handleNewChat = () => {
+    // Reset all dashboard state (logs, timeline, security report, recent deployments)
+    resetSession();
+    // Reset local chat messages
     setMessages([
       {
         id: Date.now().toString(),
@@ -57,6 +61,9 @@ export default function AIAgent({ className }: AIAgentProps) {
     ]);
     setInputValue("");
     setCurrentTask("Ready to assist with your deployment...");
+    toast.success("Session cleared", {
+      description: "Logs, deployment status, and security alerts have been reset.",
+    });
   };
 
   const scrollToBottom = () => {
@@ -205,13 +212,15 @@ export default function AIAgent({ className }: AIAgentProps) {
               {isActive ? "Connected" : "Standby"}
             </Badge>
             <Button
-              variant="ghost"
-              size="icon"
-              onClick={clearChat}
-              className="w-8 h-8 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              title="Reset Conversation"
+              id="new-chat-btn"
+              variant="outline"
+              size="sm"
+              onClick={handleNewChat}
+              className="h-8 px-3 text-xs font-semibold border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-all"
+              title="Start a new session — clears chat, logs, timeline and security alerts"
             >
-              <RefreshCw className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
+              New Chat
             </Button>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
+import { useDeployment } from "@/context/DeploymentContext";
 import { cn } from "@/lib/utils";
 
 interface Deployment {
@@ -72,8 +73,18 @@ interface DeploymentsTableProps {
 
 export default function DeploymentsTable({ className }: DeploymentsTableProps) {
   const { userId } = useAuth();
+  const { sessionKey } = useDeployment();
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
+  const prevSessionKey = useRef(sessionKey);
+
+  // Clear local list when user starts a new session
+  useEffect(() => {
+    if (sessionKey !== prevSessionKey.current) {
+      prevSessionKey.current = sessionKey;
+      setDeployments([]);
+    }
+  }, [sessionKey]);
 
   const fetchDeployments = async () => {
     if (!userId) return;

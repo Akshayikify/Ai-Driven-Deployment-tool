@@ -11,8 +11,8 @@ class OpenRouterProvider(AIProvider):
                 base_url="https://openrouter.ai/api/v1",
                 api_key=self.api_key,
             )
-            # Use a reliable free Mistral model as a fallback
-            self.model = "mistralai/mistral-7b-instruct:free" 
+            # Use a reliable free Gemini model as a fallback
+            self.model = "google/gemini-2.5-flash:free" 
             logger.info("OpenRouterProvider initialized.")
         except Exception as e:
             logger.error(f"Failed to initialize OpenRouterProvider: {e}")

@@ -109,7 +109,13 @@ class AIService:
         logger.warning("All AI providers failed to generate Dockerfile.")
         return None
 
-    async def analyze_build_failure(self, logs: str, repo_url: str, workflow_path: str = None) -> Optional[str]:
+    async def analyze_build_failure(
+        self,
+        logs: str,
+        repo_url: str,
+        workflow_path: str = None,
+        file_contexts: Optional[Dict[str, str]] = None
+    ) -> Optional[str]:
         """
         Analyzes failed GitHub Actions logs and provides a strict JSON payload with diagnosis and file fixes.
         """
@@ -121,12 +127,19 @@ class AIService:
 
         context_hint = f" The original workflow filename was identified as: {workflow_path}." if workflow_path else ""
 
+        files_context_str = ""
+        if file_contexts:
+            files_context_str = "\nOriginal file contents currently in repository:\n"
+            for path, content in file_contexts.items():
+                files_context_str += f"\nFile: `{path}`\n```\n{content}\n```\n"
+
         prompt = rf"""
         You are an expert DevOps engineer and AI assistant. The following are the raw terminal logs from a failed GitHub Actions CI/CD pipeline run for the repository: {repo_url}.{context_hint}
         
         <logs>
         {truncated_logs}
         </logs>
+        {files_context_str}
         
         Please analyze these logs and determine exactly how to fix the repository code to make the pipeline pass.
         If you are modifying a workflow file, make sure it is the correct filename (e.g., '.github/workflows/deploy.yml' or as specified in the hint).
