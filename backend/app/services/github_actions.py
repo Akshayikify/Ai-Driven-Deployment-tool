@@ -64,6 +64,23 @@ class GitHubActionsService:
                 logger.error(f"Failed to download logs for job {job_id}: {e}")
         return None
 
+    async def _get_raw_github_file(self, owner: str, repo: str, path: str, token: str) -> Optional[str]:
+        """Fetches the raw file content from GitHub using the OAuth token."""
+        url = f"{self.api_base}/repos/{owner}/{repo}/contents/{path}"
+        headers = {
+            "Accept": "application/vnd.github.raw",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=headers)
+                if response.status_code == 200:
+                    return response.text
+            except Exception as e:
+                logger.error(f"Failed to fetch raw file {path} from GitHub: {e}")
+        return None
+
     async def apply_auto_fix(self, owner: str, repo: str, token: str, actions: list) -> bool:
         """Applies an auto-fix payload to the repository using the GitHub API."""
         headers = {
@@ -220,11 +237,47 @@ class GitHubActionsService:
                         job_id = failed_job.get("id")
                         raw_logs = await self._get_job_logs(owner, repo, job_id, token)
                         if raw_logs:
-                            from app.services.ai_service import ai_service
+                            # Gather original configurations for LLM context
+                            files_to_check = {"Dockerfile"}
                             workflow_path = run.get("path")
-                            diagnosis_json = await ai_service.analyze_build_failure(raw_logs, repo_url, workflow_path)
+                            if workflow_path:
+                                files_to_check.add(workflow_path.lstrip("/"))
+                            
+                            # Scan logs for references to dependency descriptors/scripts
+                            for common_file in ["pom.xml", "package.json", "requirements.txt", "go.mod", "mvnw", "gradlew", "build.gradle"]:
+                                if common_file in raw_logs:
+                                    files_to_check.add(common_file)
+                            
+                            file_contexts = {}
+                            for file_path in files_to_check:
+                                content = await self._get_raw_github_file(owner, repo, file_path, token)
+                                if content:
+                                    file_contexts[file_path] = content
+                                    logger.info(f"Retrieved original content for {file_path} from GitHub.")
+                            
+                            from app.services.ai_service import ai_service
+                            diagnosis_json = await ai_service.analyze_build_failure(
+                                raw_logs,
+                                repo_url,
+                                workflow_path,
+                                file_contexts=file_contexts
+                            )
                             if diagnosis_json:
                                 logger.info(f"[AUTO_FIX_PAYLOAD] {diagnosis_json}")
+                                # Store the auto-fix actions/diagnosis in the task for reload resilience
+                                try:
+                                    import json
+                                    auto_fix_data = json.loads(diagnosis_json)
+                                    if task_id and task_id in task_manager.tasks:
+                                        task_manager.tasks[task_id]["auto_fix"] = auto_fix_data
+                                        task_manager.update_task(
+                                            task_id,
+                                            "failed",
+                                            message=f"Pipeline failed with conclusion: {conclusion}. Auto-fix suggestion is ready.",
+                                            auto_fix=auto_fix_data
+                                        )
+                                except Exception as json_err:
+                                    logger.error(f"Failed to parse or store auto-fix payload: {json_err}")
                 
                 if conclusion == "success":
                     logger.info(f"🔗 View Full Logs: https://github.com/{owner}/{repo}/actions/runs/{run_id}")

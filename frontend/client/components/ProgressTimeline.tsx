@@ -1,12 +1,12 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { CheckCircle, Clock, Loader2 } from "lucide-react";
+import { CheckCircle, Clock, Loader2, XCircle } from "lucide-react";
 
 interface TimelineStep {
   id: string;
   title: string;
   description: string;
-  status: "pending" | "active" | "completed";
+  status: "pending" | "active" | "completed" | "failed";
   timestamp?: string;
 }
 
@@ -35,6 +35,8 @@ export default function ProgressTimeline({
                     "bg-green-600 border-green-600 text-white shadow-sm",
                   step.status === "active" &&
                     "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20",
+                  step.status === "failed" &&
+                    "bg-red-600 border-red-600 text-white shadow-sm",
                   step.status === "pending" &&
                     "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400",
                 )}
@@ -44,6 +46,9 @@ export default function ProgressTimeline({
                 )}
                 {step.status === "active" && (
                   <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                {step.status === "failed" && (
+                  <XCircle className="w-4 h-4" />
                 )}
                 {step.status === "pending" && <Clock className="w-4 h-4" />}
               </div>
@@ -69,6 +74,7 @@ export default function ProgressTimeline({
                     "text-sm font-bold transition-colors duration-300 uppercase tracking-tight",
                     step.status === "completed" && "text-green-700 dark:text-green-500",
                     step.status === "active" && "text-blue-700 dark:text-blue-400",
+                    step.status === "failed" && "text-red-700 dark:text-red-400",
                     step.status === "pending" && "text-slate-500 dark:text-slate-400",
                   )}
                 >

@@ -23,11 +23,12 @@ class TaskManager:
                 "commit": kwargs.get("commit", "N/A"),
                 "duration": kwargs.get("duration", "-"),
                 "steps": [
-                    {"id": "upload", "title": "Code Uploaded", "description": "Project files successfully uploaded to the platform", "status": "completed", "timestamp": "Just now"},
-                    {"id": "analyze", "title": "AI Analysis", "description": "Analyzing project structure and dependencies", "status": "pending"},
-                    {"id": "build", "title": "Build Process", "description": "Building application for deployment", "status": "pending"},
-                    {"id": "deploy", "title": "Deployment", "description": "Deploying to production environment", "status": "pending"},
-                    {"id": "monitor", "title": "Monitoring", "description": "Setting up monitoring and alerts", "status": "pending"},
+                    {"id": "upload",   "title": "Code Uploaded",  "description": "Project files successfully uploaded to the platform", "status": "completed", "timestamp": "Just now"},
+                    {"id": "analyze",  "title": "AI Analysis",    "description": "Analyzing project structure and dependencies", "status": "pending"},
+                    {"id": "security", "title": "Security Scan",  "description": "Scanning for hardcoded secrets and API keys", "status": "pending"},
+                    {"id": "build",    "title": "Build Process",  "description": "Building application for deployment", "status": "pending"},
+                    {"id": "deploy",   "title": "Deployment",     "description": "Deploying to production environment", "status": "pending"},
+                    {"id": "monitor",  "title": "Monitoring",     "description": "Setting up monitoring and alerts", "status": "pending"},
                 ],
                 "current_message": "Task initialized",
                 "status": "pending"
@@ -51,12 +52,44 @@ class TaskManager:
             self._update_step(task, "analyze", "active")
             task["current_message"] = "Analyzing project structure..."
             task["status"] = "running"
+        elif status == "security_scanning":
+            self._update_step(task, "analyze", "completed")
+            self._update_step(task, "security", "active")
+            task["current_message"] = "🔍 Scanning for hardcoded secrets and API keys..."
+            task["status"] = "running"
+        elif status == "security_failed":
+            # Security alerts are treated as warnings only — they do NOT mark the
+            # deployment as failed and are NOT persisted to MongoDB.
+            # The frontend still sees the findings for display purposes.
+            self._update_step(task, "security", "failed")
+            task["current_message"] = f"⚠️ Security findings detected (not stored): {message}"
+            task["status"] = "security_warning"  # distinct non-failed status
+            # Store the security report dict on the task for the frontend to display
+            if "security_report" in kwargs:
+                task["security_report"] = kwargs["security_report"]
+            # Calculate duration
+            if "start_time" in task:
+                diff = datetime.datetime.now() - task["start_time"]
+                seconds = int(diff.total_seconds())
+                task["duration"] = f"{seconds}s" if seconds < 60 else f"{seconds // 60}m {seconds % 60}s"
+        elif status == "awaiting_push_confirmation":
+            # Pipeline has generated files but paused — waiting for the user to
+            # explicitly approve or cancel the GitHub push after reviewing findings.
+            self._update_step(task, "security", "failed")   # amber warning icon on Security step
+            self._update_step(task, "build", "pending")     # downstream steps remain pending
+            task["current_message"] = (
+                "⏸️ Security findings detected. Awaiting your confirmation to push to GitHub."
+            )
+            task["status"] = "awaiting_push_confirmation"
+            if "security_report" in kwargs:
+                task["security_report"] = kwargs["security_report"]
         elif status == "generating":
-            self._update_step(task, "analyze", "active")
+            self._update_step(task, "security", "completed")
+            self._update_step(task, "build", "active")
             task["current_message"] = "Generating deployment files..."
             task["status"] = "running"
         elif status == "pushing":
-            self._update_step(task, "analyze", "active")
+            self._update_step(task, "build", "active")
             task["current_message"] = "Pushing changes to GitHub..."
             task["status"] = "running"
         elif status == "building":
@@ -105,15 +138,22 @@ class TaskManager:
         task["updated_at"] = datetime.datetime.now().isoformat()
         logger.debug(f"Task {task_id} updated to {status}")
         
-        # Async sync to MongoDB for analytics and history
+        # Async sync to MongoDB for analytics and history.
+        # Skip storage if the task has security warnings — those are advisory only
+        # and must not pollute the deployments collection with false failures.
         import asyncio
         from app.db.mongodb import db
-        try:
-            # We use try/except and create_task to not block the main logic 
-            # and handle cases where DB might not be connected yet
-            asyncio.create_task(db.store_deployment_data(task))
-        except Exception as e:
-            logger.warning(f"Failed to trigger MongoDB sync for task {task_id}: {e}")
+        _skip_statuses = {"security_warning", "awaiting_push_confirmation"}
+        if task.get("status") in _skip_statuses:
+            logger.debug(
+                f"Task {task_id}: Skipping MongoDB sync — status is '{task.get('status')}' "
+                f"(transient/advisory state, not stored)."
+            )
+        else:
+            try:
+                asyncio.create_task(db.store_deployment_data(task))
+            except Exception as e:
+                logger.warning(f"Failed to trigger MongoDB sync for task {task_id}: {e}")
 
     def _update_step(self, task: dict, step_id: str, status: str):
         for step in task["steps"]:
@@ -122,7 +162,7 @@ class TaskManager:
                 if status == "active" and step["status"] == "completed":
                     return
                 step["status"] = status
-                if status == "completed":
+                if status in ("completed", "failed"):
                     step["timestamp"] = datetime.datetime.now().strftime("%H:%M:%S")
                 break
 

@@ -76,6 +76,24 @@ class MongoDB:
             logger.error(f"Error storing deployment data: {e}")
             return False
 
+    async def get_deployment_by_id(self, task_id: str) -> Optional[dict]:
+        """
+        Fetch a single deployment record from MongoDB by task ID.
+        Used as a fallback when the task is no longer in the in-memory
+        task_manager (e.g. after a server reload mid-deployment).
+        """
+        if self.db is None:
+            await self.connect_to_mongo()
+        try:
+            doc = await self.db.deployments.find_one({"id": task_id})
+            if doc:
+                doc.pop("_id", None)   # strip non-serializable ObjectId
+                return doc
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching deployment {task_id} from MongoDB: {e}")
+            return None
+
     async def get_deployment_stats(self, user_id: Optional[str] = None) -> dict:
         if self.db is None:
             await self.connect_to_mongo()

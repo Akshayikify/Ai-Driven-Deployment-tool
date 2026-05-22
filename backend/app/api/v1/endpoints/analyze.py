@@ -4,6 +4,7 @@ from typing import Optional
 from app.services.repository import repo_service
 from app.services.analysis import analysis_engine
 from app.services.generator import file_generator
+from app.services.security_scanner import security_scanner
 from app.core.config import settings
 from loguru import logger
 import uuid
@@ -95,8 +96,48 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
             if "language" in findings: refine_kwargs["language"] = findings["language"]
             if "estimated_duration" in findings: refine_kwargs["estimated_duration"] = findings["estimated_duration"]
             task_manager.update_task(task_id, **refine_kwargs)
-            
-        # 3. Generate Deployment Files
+
+        # ── Step 2.5: Security Scan ──────────────────────────────────────────
+        task_manager.update_task(task_id, "security_scanning")
+        security_report = security_scanner.scan(workspace, findings.get("file_index", {}))
+
+        # Attach the report to findings so it's included in any downstream data
+        findings["security_report"] = security_report.model_dump()
+
+        if not security_report.is_clean:
+            # Security findings (any severity) — generate files first so the user
+            # can see the full picture, then PAUSE and ask for push confirmation.
+            logger.warning(
+                f"Task {task_id}: Security scan found issues (advisory). "
+                f"{security_report.summary}"
+            )
+
+            # ── Step 3 (early): generate files regardless so they’re ready
+            task_manager.update_task(task_id, "generating")
+            t0_gen = time.time()
+            await file_generator.generate_deployment_files(workspace, findings)
+            t_generate = time.time() - t0_gen
+
+            # Store workspace path and github_token on the task so the
+            # confirm-push endpoint can resume the pipeline later.
+            task_manager.tasks[task_id]["_workspace"] = workspace
+            task_manager.tasks[task_id]["_github_token"] = github_token
+            task_manager.tasks[task_id]["_repo_url"] = repo_url
+            task_manager.tasks[task_id]["_findings"] = {
+                "language": findings.get("language"),
+                "estimated_duration": findings.get("estimated_duration"),
+            }
+
+            # Pause — set status to awaiting_push_confirmation
+            task_manager.update_task(
+                task_id,
+                "awaiting_push_confirmation",
+                security_report=security_report.model_dump(),
+            )
+            # Background task ends here; the confirm-push endpoint resumes it.
+            return
+
+        # ── Step 3: Generate Deployment Files (clean scan path) ─────────────
         task_manager.update_task(task_id, "generating")
         t0_gen = time.time()
         await file_generator.generate_deployment_files(workspace, findings)
@@ -138,6 +179,7 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
             if 'findings' in locals():
                 if "language" in findings: update_kwargs["language"] = findings["language"]
                 if "estimated_duration" in findings: update_kwargs["estimated_duration"] = findings["estimated_duration"]
+                if "security_report" in findings: update_kwargs["security_report"] = findings["security_report"]
             task_manager.update_task(task_id, **update_kwargs)
     except Exception as e:
         import traceback
@@ -153,6 +195,61 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
         # Ensure cleanup on failure
         try:
             if 'workspace' in locals() and workspace:
+                repo_service.cleanup_workspace(workspace)
+        except:
+            pass
+
+
+async def _resume_push(task_id: str):
+    """
+    Resumes the deployment pipeline after the user confirms the security push.
+    Called by the /confirm-push endpoint as a background task.
+    """
+    task = task_manager.get_task(task_id)
+    if not task:
+        logger.error(f"confirm-push: task {task_id} not found.")
+        return
+
+    import time
+    workspace    = task.get("_workspace")
+    github_token = task.get("_github_token")
+    repo_url     = task.get("_repo_url", task.get("repo_url", ""))
+    meta         = task.get("_findings", {})
+
+    if not workspace:
+        logger.error(f"confirm-push: no workspace stored for task {task_id}.")
+        task_manager.update_task(task_id, "failed", message="Workspace not available for push.")
+        return
+
+    try:
+        t_push = 0
+        if github_token:
+            task_manager.update_task(task_id, "pushing")
+            logger.info(f"Task {task_id}: User confirmed push — pushing changes to GitHub...")
+            t0_push = time.time()
+            repo_service.push_changes(workspace)
+            t_push = time.time() - t0_push
+
+        repo_service.cleanup_workspace(workspace)
+
+        if github_token:
+            import asyncio
+            from app.services.github_actions import github_actions_service
+            asyncio.create_task(
+                github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id)
+            )
+        else:
+            update_kwargs: dict = {"status": "completed"}
+            if meta.get("language"):           update_kwargs["language"] = meta["language"]
+            if meta.get("estimated_duration"): update_kwargs["estimated_duration"] = meta["estimated_duration"]
+            task_manager.update_task(task_id, **update_kwargs)
+
+    except Exception as e:
+        import traceback
+        logger.error(f"confirm-push task {task_id} failed: {e}\n{traceback.format_exc()}")
+        task_manager.update_task(task_id, "failed", message=str(e))
+        try:
+            if workspace:
                 repo_service.cleanup_workspace(workspace)
         except:
             pass
@@ -173,12 +270,79 @@ async def start_analysis(request: AnalyzeRequest, background_tasks: BackgroundTa
         "message": f"Analysis for {request.repo_url} has been started in the background."
     }
 
+
+@router.post("/confirm-push/{task_id}")
+async def confirm_push(task_id: str, background_tasks: BackgroundTasks):
+    """
+    User has reviewed the security findings and approved the GitHub push.
+    Resumes the paused pipeline from the awaiting_push_confirmation state.
+    """
+    task = task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    if task.get("status") != "awaiting_push_confirmation":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task is not awaiting confirmation (current status: {task.get('status')})."
+        )
+
+    logger.info(f"Task {task_id}: User confirmed push despite security findings. Resuming pipeline.")
+    background_tasks.add_task(_resume_push, task_id)
+    return {"status": "resuming", "message": "Push confirmed. Deployment pipeline is resuming."}
+
+
+@router.post("/cancel-push/{task_id}")
+async def cancel_push(task_id: str):
+    """
+    User has reviewed the security findings and declined the GitHub push.
+    Cleans up the workspace and marks the task as cancelled (not failed).
+    """
+    task = task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    if task.get("status") != "awaiting_push_confirmation":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task is not awaiting confirmation (current status: {task.get('status')})."
+        )
+
+    workspace = task.get("_workspace")
+    if workspace:
+        try:
+            repo_service.cleanup_workspace(workspace)
+        except Exception as e:
+            logger.warning(f"Task {task_id}: cleanup failed during cancel-push: {e}")
+
+    # Update to a neutral 'cancelled' state — not stored in MongoDB
+    task["status"] = "security_warning"
+    task["current_message"] = (
+        "❌ Push cancelled by user. Security findings were not resolved. "
+        "Fix the issues and re-deploy to proceed."
+    )
+    task["_workspace"] = None
+    logger.info(f"Task {task_id}: User cancelled push. Workspace cleaned up.")
+    return {"status": "cancelled", "message": "Push cancelled. Workspace cleaned up."}
+
+
 @router.get("/status/{task_id}")
 async def get_task_status(task_id: str):
-    status = task_manager.get_task(task_id)
-    if not status:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return status
+    # Primary: check in-memory store (fast path, always up-to-date while server is running)
+    task = task_manager.get_task(task_id)
+    if task:
+        return task
+
+    # Fallback: task may have been written to MongoDB by a previous server process
+    # (e.g. uvicorn hot-reload during a long-running GitHub Actions monitor).
+    from app.db.mongodb import db
+    mongo_task = await db.get_deployment_by_id(task_id)
+    if mongo_task:
+        logger.info(
+            f"Status lookup: task {task_id} not in memory — serving from MongoDB fallback "
+            f"(status={mongo_task.get('status')})."
+        )
+        return mongo_task
+
+    raise HTTPException(status_code=404, detail="Task not found")
 
 @router.get("/tasks")
 async def list_recent_tasks(user_id: Optional[str] = None):
@@ -195,6 +359,7 @@ class AutoFixRequest(BaseModel):
     repo_url: str
     user_id: str
     actions: list
+    task_id: Optional[str] = None   # the original deployment task to update after auto-fix
 
 @router.post("/auto-fix")
 async def trigger_auto_fix(request: AutoFixRequest):
@@ -216,9 +381,16 @@ async def trigger_auto_fix(request: AutoFixRequest):
     
     if not success:
         raise HTTPException(status_code=500, detail="Failed to apply auto-fix to repository.")
-        
-    # Re-trigger monitoring for the new pipeline run triggered by the fix
+
+    # Re-trigger monitoring for the new pipeline run, threading the original task_id
+    # so the task is updated to completed/failed when the auto-fix pipeline finishes.
     import asyncio
-    asyncio.create_task(github_actions_service.monitor_workflow(request.repo_url, github_token))
+    asyncio.create_task(
+        github_actions_service.monitor_workflow(
+            request.repo_url,
+            github_token,
+            task_id=request.task_id or None,   # None is safe — monitor still runs, just no task update
+        )
+    )
 
     return {"status": "success", "message": "Auto-fix applied successfully. GitHub Actions will trigger a rebuild shortly."}

@@ -4,8 +4,9 @@ import DeploymentsTable from "@/components/DeploymentsTable";
 import ProgressTimeline from "@/components/ProgressTimeline";
 import LogMonitoringCard from "@/components/LogMonitoringCard";
 import AIAgent from "@/components/AIAgent";
+import SecurityReportCard from "@/components/SecurityReportCard";
 import { Card } from "@/components/ui/card";
-import { Activity, Clock, Server } from "lucide-react";
+import { Activity, Clock, Server, ShieldAlert, ShieldX, Github as GithubIcon, X } from "lucide-react";
 
 import { useDeployment } from "@/context/DeploymentContext";
 import { useUser } from "@clerk/clerk-react";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function Dashboard() {
-  const { steps, estimatedDuration } = useDeployment();
+  const { steps, estimatedDuration, securityReport, awaitingPushConfirmation, confirmPush, cancelPush } = useDeployment();
   const { user, isLoaded } = useUser();
 
   const hasGitHub = user?.externalAccounts?.some(account => account.provider === 'github');
@@ -40,8 +41,125 @@ export default function Dashboard() {
     }
   };
 
+  const handleConfirmPush = async () => {
+    await confirmPush();
+    toast.success("Push confirmed! Deployment pipeline is resuming.", {
+      description: "Your changes are being pushed to GitHub now.",
+    });
+  };
+
+  const handleCancelPush = async () => {
+    await cancelPush();
+    toast.warning("Push cancelled.", {
+      description: "Resolve the security findings and re-deploy to proceed.",
+    });
+  };
+
   return (
     <DashboardLayout>
+      {/* ── Security Push Confirmation Modal ── */}
+      {awaitingPushConfirmation && securityReport && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sec-confirm-title"
+        >
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-amber-200 dark:border-amber-800/50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-start gap-4 bg-amber-50 dark:bg-amber-900/20 px-6 py-5 border-b border-amber-100 dark:border-amber-800/40">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+                <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 id="sec-confirm-title" className="text-base font-extrabold text-amber-800 dark:text-amber-300">
+                  Security Findings Detected
+                </h2>
+                <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-0.5 leading-relaxed">
+                  The security scanner found <strong>{securityReport.findings?.length ?? 0} issue(s)</strong> in your
+                  repository. Do you still want to push the deployment files to GitHub?
+                </p>
+              </div>
+              <button
+                onClick={handleCancelPush}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex-shrink-0 mt-0.5"
+                aria-label="Cancel push"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Findings preview (top 3) */}
+            {securityReport.findings && securityReport.findings.length > 0 && (
+              <div className="px-6 py-4 space-y-2 border-b border-slate-100 dark:border-slate-800 max-h-52 overflow-y-auto">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">
+                  Top findings
+                </p>
+                {securityReport.findings.slice(0, 3).map((f: any, i: number) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-2 px-3 py-2 rounded-lg border text-xs ${
+                      f.severity === "CRITICAL"
+                        ? "bg-red-50 border-red-200 dark:bg-red-900/10 dark:border-red-800/40"
+                        : f.severity === "HIGH"
+                          ? "bg-orange-50 border-orange-200 dark:bg-orange-900/10 dark:border-orange-800/40"
+                          : "bg-amber-50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-800/40"
+                    }`}
+                  >
+                    <ShieldX
+                      className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${
+                        f.severity === "CRITICAL" ? "text-red-500" : f.severity === "HIGH" ? "text-orange-500" : "text-amber-500"
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <span
+                        className={`inline-block text-[9px] font-black uppercase tracking-wider px-1.5 py-0 rounded border mr-1.5 ${
+                          f.severity === "CRITICAL"
+                            ? "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400"
+                            : f.severity === "HIGH"
+                              ? "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400"
+                              : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400"
+                        }`}
+                      >
+                        {f.severity}
+                      </span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{f.description}</span>
+                      <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                        {f.file_path}{f.line_number > 0 ? ` : line ${f.line_number}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {securityReport.findings.length > 3 && (
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center pt-1">
+                    + {securityReport.findings.length - 3} more issue(s) — see the Security Report below
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-900/60">
+              <Button
+                id="cancel-push-btn"
+                variant="outline"
+                onClick={handleCancelPush}
+                className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel Push
+              </Button>
+              <Button
+                id="confirm-push-btn"
+                onClick={handleConfirmPush}
+                className="bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 shadow-sm"
+              >
+                <GithubIcon className="w-4 h-4" />
+                Proceed with Push
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
         {/* Welcome Section */}
         <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-4 sm:p-6 mb-6 shadow-sm">
@@ -116,6 +234,11 @@ export default function Dashboard() {
               </div>
             </Card>
           </div>
+
+          {/* 2b. Security Report Card — visible whenever a scan result arrives */}
+          {securityReport && (
+            <SecurityReportCard report={securityReport} />
+          )}
 
           {/* 3. Recent Deployments Table */}
           <div className="pt-4">
