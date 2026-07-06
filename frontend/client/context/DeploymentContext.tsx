@@ -25,6 +25,7 @@ interface DeploymentContextType {
     /** Clears all deployment state and starts a fresh session. */
     resetSession: () => void;
     autoFix: any | null;
+    deploymentUrl: string | null;
 }
 
 const defaultSteps: TimelineStep[] = [
@@ -32,8 +33,11 @@ const defaultSteps: TimelineStep[] = [
     { id: "analyze",  title: "AI Analysis",    description: "Analyzing project structure and dependencies",       status: "pending" },
     { id: "security", title: "Security Scan",  description: "Scanning for hardcoded secrets and API keys",        status: "pending" },
     { id: "build",    title: "Build Process",  description: "Building application for deployment",                status: "pending" },
-    { id: "deploy",   title: "Deployment",     description: "Deploying to production environment",                status: "pending" },
-    { id: "monitor",  title: "Monitoring",     description: "Setting up monitoring and alerts",                   status: "pending" },
+    { id: "minikube_deploy", title: "Deploying To Minikube", description: "Preparing Kubernetes manifests",       status: "pending" },
+    { id: "minikube_deployment", title: "Creating Deployment", description: "Applying deployment manifest to cluster", status: "pending" },
+    { id: "minikube_service", title: "Creating Service", description: "Applying service manifest to cluster",       status: "pending" },
+    { id: "minikube_pods", title: "Waiting For Pods", description: "Waiting for pods to be in Running state",    status: "pending" },
+    { id: "minikube_live", title: "Application Live", description: "Deployment is live on local Minikube cluster", status: "pending" },
 ];
 
 const DeploymentContext = createContext<DeploymentContextType | undefined>(undefined);
@@ -48,6 +52,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     const [awaitingPushConfirmation, setAwaitingPushConfirmation] = useState<boolean>(false);
     const [sessionKey, setSessionKey] = useState<number>(0);
     const [autoFix, setAutoFix] = useState<any | null>(null);
+    const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null);
 
     const resetSession = () => {
         setActiveTaskId(null);
@@ -58,6 +63,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
         setSecurityReport(null);
         setAwaitingPushConfirmation(false);
         setAutoFix(null);
+        setDeploymentUrl(null);
         setSessionKey(k => k + 1); // signal all subscribers to reset
     };
 
@@ -102,6 +108,9 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
                         if (data.auto_fix) {
                             setAutoFix(data.auto_fix);
                         }
+                        if (data.deployment_url) {
+                            setDeploymentUrl(data.deployment_url);
+                        }
                         // Drive the confirmation modal
                         setAwaitingPushConfirmation(
                             data.status === "awaiting_push_confirmation"
@@ -130,6 +139,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
             setSecurityReport(null);
             setAwaitingPushConfirmation(false);
             setAutoFix(null);
+            setDeploymentUrl(null);
         }
 
         return () => {
@@ -152,7 +162,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     };
 
     return (
-        <DeploymentContext.Provider value={{ activeTaskId, setActiveTaskId, repoUrl, setRepoUrl, steps, currentMessage, estimatedDuration, securityReport, awaitingPushConfirmation, confirmPush, cancelPush, sessionKey, resetSession, autoFix }}>
+        <DeploymentContext.Provider value={{ activeTaskId, setActiveTaskId, repoUrl, setRepoUrl, steps, currentMessage, estimatedDuration, securityReport, awaitingPushConfirmation, confirmPush, cancelPush, sessionKey, resetSession, autoFix, deploymentUrl }}>
             {children}
         </DeploymentContext.Provider>
     );

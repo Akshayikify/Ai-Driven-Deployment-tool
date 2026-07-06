@@ -27,8 +27,11 @@ class TaskManager:
                     {"id": "analyze",  "title": "AI Analysis",    "description": "Analyzing project structure and dependencies", "status": "pending"},
                     {"id": "security", "title": "Security Scan",  "description": "Scanning for hardcoded secrets and API keys", "status": "pending"},
                     {"id": "build",    "title": "Build Process",  "description": "Building application for deployment", "status": "pending"},
-                    {"id": "deploy",   "title": "Deployment",     "description": "Deploying to production environment", "status": "pending"},
-                    {"id": "monitor",  "title": "Monitoring",     "description": "Setting up monitoring and alerts", "status": "pending"},
+                    {"id": "minikube_deploy", "title": "Deploying To Minikube", "description": "Preparing Kubernetes manifests", "status": "pending"},
+                    {"id": "minikube_deployment", "title": "Creating Deployment", "description": "Applying deployment manifest to cluster", "status": "pending"},
+                    {"id": "minikube_service", "title": "Creating Service", "description": "Applying service manifest to cluster", "status": "pending"},
+                    {"id": "minikube_pods", "title": "Waiting For Pods", "description": "Waiting for pods to be in Running state", "status": "pending"},
+                    {"id": "minikube_live", "title": "Application Live", "description": "Deployment is live on local Minikube cluster", "status": "pending"},
                 ],
                 "current_message": "Task initialized",
                 "status": "pending"
@@ -99,14 +102,51 @@ class TaskManager:
             task["status"] = "running"
         elif status == "deploying":
             self._update_step(task, "build", "completed")
-            self._update_step(task, "deploy", "active")
+            self._update_step(task, "minikube_deploy", "active")
             task["current_message"] = "GitHub Actions Pipeline: Deploying..."
             task["status"] = "running"
+        elif status == "deploying_to_minikube":
+            self._update_step(task, "build", "completed")
+            self._update_step(task, "minikube_deploy", "active")
+            task["current_message"] = "Deploying to Minikube..."
+            task["status"] = "running"
+        elif status == "creating_deployment":
+            self._update_step(task, "minikube_deploy", "completed")
+            self._update_step(task, "minikube_deployment", "active")
+            task["current_message"] = "Creating Kubernetes Deployment..."
+            task["status"] = "running"
+        elif status == "creating_service":
+            self._update_step(task, "minikube_deployment", "completed")
+            self._update_step(task, "minikube_service", "active")
+            task["current_message"] = "Creating Kubernetes Service..."
+            task["status"] = "running"
+        elif status == "waiting_for_pods":
+            self._update_step(task, "minikube_service", "completed")
+            self._update_step(task, "minikube_pods", "active")
+            task["current_message"] = "Waiting for pods to be in Running state..."
+            task["status"] = "running"
+        elif status == "application_live":
+            self._update_step(task, "minikube_pods", "completed")
+            self._update_step(task, "minikube_live", "completed")
+            task["current_message"] = "Application Live!"
+            task["status"] = "success"
+            
+            # Calculate duration
+            if "start_time" in task:
+                diff = datetime.datetime.now() - task["start_time"]
+                seconds = int(diff.total_seconds())
+                if seconds < 60:
+                    task["duration"] = f"{seconds}s"
+                else:
+                    task["duration"] = f"{seconds // 60}m {seconds % 60}s"
         elif status == "completed":
             self._update_step(task, "analyze", "completed")
             self._update_step(task, "build", "completed")
-            self._update_step(task, "deploy", "completed")
-            self._update_step(task, "monitor", "completed")
+            self._update_step(task, "minikube_deploy", "completed")
+            self._update_step(task, "minikube_deployment", "completed")
+            self._update_step(task, "minikube_service", "completed")
+            self._update_step(task, "minikube_pods", "completed")
+            self._update_step(task, "minikube_live", "completed")
             task["current_message"] = "Deployment complete!"
             task["status"] = "success"
             
