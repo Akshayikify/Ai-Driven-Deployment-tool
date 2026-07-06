@@ -46,6 +46,144 @@
 - MongoDB Atlas Account
 - Clerk Account (for Authentication)
 - GitHub Personal Access Token (with `repo` scope)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (required for Minikube)
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) v1.38.1+
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) (latest stable)
+
+---
+
+## 🐳 Docker & Minikube Setup (Local Kubernetes)
+
+AutoDeploy.ai uses Minikube to deploy your containerized applications locally. Follow these steps carefully to set up a stable environment.
+
+### Step 1: Verify Docker Desktop is Running
+
+Open **Docker Desktop** and confirm the engine is running. Then verify in terminal:
+
+```bash
+docker ps
+```
+
+Look for a container named `minikube` (if Minikube was previously started). If Docker is running without errors, proceed to the next step.
+
+---
+
+### Step 2: Delete Any Corrupted Minikube Cluster
+
+If you have an existing broken or outdated cluster, wipe it first:
+
+```bash
+minikube delete --all
+```
+
+Wait until all resources are fully deleted before continuing.
+
+---
+
+### Step 3: Upgrade Minikube
+
+Open **PowerShell as Administrator** and run:
+
+```powershell
+winget upgrade Kubernetes.minikube
+```
+
+Verify the installed version:
+
+```bash
+minikube version
+```
+
+> ✅ **Recommended:** `v1.38.1` or higher
+
+---
+
+### Step 4: Upgrade kubectl
+
+```powershell
+winget upgrade Kubernetes.kubectl
+```
+
+Verify:
+
+```bash
+kubectl version --client
+```
+
+---
+
+### Step 5: Restart Docker Desktop Completely
+
+Do this properly — don't just close the window:
+
+1. **Quit Docker Desktop** → system tray → *Quit Docker Desktop*
+2. **Wait 20 seconds**
+3. **Open Docker Desktop**
+4. Wait until it shows: **Engine running**
+
+---
+
+### Step 6: Start Minikube with a Stable Kubernetes Version
+
+```bash
+minikube start --driver=docker --kubernetes-version=v1.31.0
+```
+
+> ⚠️ Use `v1.31.0` — it is mature and stable. Avoid using `latest` as it may pull untested versions.
+
+---
+
+### Step 7: Troubleshoot Registry Connection Issues
+
+If you see errors like `Failing to connect to https://registry.k8s.io/`, your DNS may be the problem.
+
+**Diagnose first:**
+
+```bash
+nslookup registry.k8s.io
+```
+
+You should receive an IP address. If it **times out**, change your DNS settings:
+
+| Setting | Option A (Google) | Option B (Cloudflare) |
+|---|---|---|
+| **Preferred DNS** | `8.8.8.8` | `1.1.1.1` |
+| **Alternate DNS** | `8.8.4.4` | `1.0.0.1` |
+
+**On Windows:**
+1. Open **Control Panel → Network & Internet → Network Connections**
+2. Right-click your active adapter → **Properties**
+3. Select **Internet Protocol Version 4 (TCP/IPv4)** → **Properties**
+4. Enter the DNS values above and click **OK**
+
+Then retry:
+
+```bash
+minikube start --driver=docker --kubernetes-version=v1.31.0
+```
+
+---
+
+### Step 8: Verify Minikube is Healthy
+
+After a successful start, confirm all components are running:
+
+```bash
+minikube status
+```
+
+Expected output:
+
+```
+minikube
+type: Control Plane
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+```
+
+---
 
 ### Installation
 
