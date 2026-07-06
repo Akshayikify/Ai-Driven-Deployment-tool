@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-flash-latest"
     OPENROUTER_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "google/gemini-2.5-flash"
     GROQ_API_KEY: str = ""
     CLERK_SECRET_KEY: str = ""
     

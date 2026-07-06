@@ -16,7 +16,7 @@ class GitHubActionsService:
             "X-GitHub-Api-Version": "2022-11-28",
         }
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             try:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
@@ -36,7 +36,7 @@ class GitHubActionsService:
             "X-GitHub-Api-Version": "2022-11-28",
         }
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             try:
                 response = await client.get(jobs_url, headers=headers)
                 response.raise_for_status()
@@ -54,14 +54,16 @@ class GitHubActionsService:
             "X-GitHub-Api-Version": "2022-11-28",
         }
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             try:
                 # GitHub redirects the log download, so we need follow_redirects=True
                 response = await client.get(url, headers=headers, follow_redirects=True)
                 response.raise_for_status()
                 return response.text
             except Exception as e:
+                import traceback
                 logger.error(f"Failed to download logs for job {job_id}: {e}")
+                logger.error(traceback.format_exc())
         return None
 
     async def _get_raw_github_file(self, owner: str, repo: str, path: str, token: str) -> Optional[str]:
@@ -72,7 +74,7 @@ class GitHubActionsService:
             "Authorization": f"Bearer {token}",
             "X-GitHub-Api-Version": "2022-11-28",
         }
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             try:
                 response = await client.get(url, headers=headers)
                 if response.status_code == 200:
@@ -89,7 +91,7 @@ class GitHubActionsService:
             "X-GitHub-Api-Version": "2022-11-28",
         }
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             for action_item in actions:
                 path = action_item.get("path")
                 content = action_item.get("content")
@@ -218,7 +220,12 @@ class GitHubActionsService:
                 if conclusion == "success":
                     logger.info(f"🎉 Pipeline Complete! Your application is officially deployed and stored in GHCR!")
                     if task_id:
-                        task_manager.update_task(task_id, "completed")
+                        # Construct the GHCR image URL
+                        ghcr_image = f"ghcr.io/{owner.lower()}/{repo.lower()}:latest"
+                        from app.services.minikube_deployment_manager import deploy_to_minikube_bg
+                        asyncio.create_task(
+                            deploy_to_minikube_bg(task_id, repo, ghcr_image, token)
+                        )
                 else:
                     logger.error(f"🚨 Pipeline terminated with conclusion: {conclusion}. Please check your GitHub Actions tab.")
                     if task_id:

@@ -24,35 +24,37 @@ class PythonDockerTemplate(DockerTemplate):
             "ENV PYTHONDONTWRITEBYTECODE=1",
             "ENV PYTHONUNBUFFERED=1",
             "",
-            "RUN apt-get update && apt-get install -y --no-install-recommends gcc python3-dev && mkdir -p /root/.local",
+            "RUN apt-get update && apt-get install -y --no-install-recommends gcc python3-dev && rm -rf /var/lib/apt/lists/*",
             "",
         ]
 
-        # Conditional dependency installation
+        # Conditional dependency installation — install system-wide (no --user)
+        # so packages land in /usr/local/lib and are available to any user in final stage
         if "requirements.txt" in detected:
             content.append("COPY requirements.txt .")
-            content.append("RUN pip install --no-cache-dir --user -r requirements.txt")
+            content.append("RUN pip install --no-cache-dir -r requirements.txt")
         elif "pyproject.toml" in detected:
             content.append("COPY pyproject.toml .")
             if "poetry.lock" in detected:
                 content.append("COPY poetry.lock .")
-            content.append("RUN pip install --no-cache-dir --user .")
+            content.append("RUN pip install --no-cache-dir .")
         elif "Pipfile" in detected:
             content.append("COPY Pipfile* .")
-            content.append("RUN pip install --no-cache-dir --user pipenv && pipenv install --system")
+            content.append("RUN pip install --no-cache-dir pipenv && pipenv install --system")
 
         content.extend([
             "",
             "FROM python:3.11-slim",
             "WORKDIR /app",
             "",
-            "# Create a non-root user",
-            "RUN groupadd -r appuser && useradd -r -g appuser appuser",
+            "# Create a non-root user with home directory (-m flag)",
+            "RUN groupadd -r appuser && useradd -r -m -g appuser appuser",
             "",
-            "COPY --from=builder /root/.local /home/appuser/.local",
-            "COPY . .",
+            "# Copy installed packages from builder stage (system-wide install)",
+            "COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages",
+            "COPY --from=builder /usr/local/bin /usr/local/bin",
+            "COPY --chown=appuser:appuser . .",
             "",
-            "ENV PATH=/home/appuser/.local/bin:$PATH",
             f"EXPOSE {port}",
             "",
             "USER appuser",
@@ -63,9 +65,8 @@ class PythonDockerTemplate(DockerTemplate):
             module = os.path.splitext(entry_point)[0].replace(os.path.sep, ".")
             content.append(f'CMD ["uvicorn", "{module}:app", "--host", "0.0.0.0", "--port", "{port}"]')
         elif framework == "Django":
-            # Check if manage.py is the entry point
-            cmd_entry = entry_point if "manage.py" in entry_point else "manage.py"
-            content.append(f'CMD ["python", "{cmd_entry}", "runserver", "0.0.0.0:{port}"]')
+            # Use gunicorn for production; fall back to manage.py runserver if gunicorn not available
+            content.append(f'CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:{port} --workers 2 $(python -c \\"import os; [print(f.replace(\\\'/\\\',\\\'.\\\')[:-3]) for f in [\\\'wsgi.py\\\'] if os.path.exists(f)]\\") 2>/dev/null || python manage.py runserver 0.0.0.0:{port}"]')
         elif framework == "Flask":
             module = os.path.splitext(entry_point)[0].replace(os.path.sep, ".")
             content.append(f'ENV FLASK_APP={module}')
@@ -75,6 +76,7 @@ class PythonDockerTemplate(DockerTemplate):
 
         content.append("")
         return "\n".join(content)
+
 
     def generate_cicd_workflow(self, findings: Dict[str, Any]) -> str:
         """Generates a Python-specific CI/CD pipeline with Flake8, PyTest, and GHCR publishing."""
@@ -169,6 +171,9 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ghcr.io/${{{{ env.IMAGE_ID }}}}
+          tags: |
+            type=raw,value=latest,enable=${{{{ github.ref == 'refs/heads/main' }}}}
+            type=sha,prefix=sha-,format=short
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

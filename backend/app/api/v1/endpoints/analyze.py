@@ -33,7 +33,7 @@ async def fetch_github_token(user_id: str) -> Optional[str]:
         "Content-Type": "application/json"
     }
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         try:
             response = await client.get(url, headers=headers)
             response.raise_for_status()

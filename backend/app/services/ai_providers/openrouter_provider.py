@@ -1,5 +1,6 @@
 from openai import AsyncOpenAI
 from loguru import logger
+from app.core.config import settings
 from .base import AIProvider
 from typing import Dict, Any, Optional
 
@@ -11,9 +12,9 @@ class OpenRouterProvider(AIProvider):
                 base_url="https://openrouter.ai/api/v1",
                 api_key=self.api_key,
             )
-            # Use a reliable free Gemini model as a fallback
-            self.model = "google/gemini-2.5-flash:free" 
-            logger.info("OpenRouterProvider initialized.")
+            # Use configured OpenRouter model
+            self.model = settings.OPENROUTER_MODEL
+            logger.info(f"OpenRouterProvider initialized with model: {self.model}")
         except Exception as e:
             logger.error(f"Failed to initialize OpenRouterProvider: {e}")
             self.client = None
@@ -29,6 +30,7 @@ class OpenRouterProvider(AIProvider):
                 messages=[
                     {"role": "user", "content": prompt}
                 ],
+                max_tokens=4096,
                 extra_headers={
                     "HTTP-Referer": "https://github.com/Akshayikify/Auto_Deployment_tool",
                     "X-Title": "Auto Deploy AI",
@@ -51,6 +53,7 @@ class OpenRouterProvider(AIProvider):
                     {"role": "system", "content": "You are a helpful AI Deployment Assistant. Answer user queries about web deployment, code analysis, and DevOps correctly and concisely."},
                     {"role": "user", "content": message}
                 ],
+                max_tokens=4096,
                 extra_headers={
                     "HTTP-Referer": "https://github.com/Akshayikify/Auto_Deployment_tool",
                     "X-Title": "Auto Deploy AI",
@@ -72,6 +75,7 @@ class OpenRouterProvider(AIProvider):
                     {"role": "system", "content": "You are an expert DevOps engineer. Output ONLY the raw content of the requested Dockerfile. Do not use Markdown formatting blocks or explanations."},
                     {"role": "user", "content": prompt}
                 ],
+                max_tokens=4096,
                 extra_headers={
                     "HTTP-Referer": "https://github.com/Akshayikify/Auto_Deployment_tool",
                     "X-Title": "Auto Deploy AI",

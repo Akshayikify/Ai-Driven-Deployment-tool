@@ -114,6 +114,9 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ghcr.io/${{{{ env.IMAGE_ID }}}}
+          tags: |
+            type=raw,value=latest,enable=${{{{ github.ref == 'refs/heads/main' }}}}
+            type=sha,prefix=sha-,format=short
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
