@@ -9,7 +9,13 @@ class RubyDockerTemplate(DockerTemplate):
         Handles missing Gemfile.lock by ensuring the bundle is initialized correctly.
         """
         detected = findings.get("detected_files", [])
-        entry_point = findings.get("entry_point", "main.rb")
+        entry_point = findings.get("entry_point") or "main.rb"
+        service_path = findings.get("path", "")
+        if service_path and service_path != ".":
+            service_path_clean = service_path.replace("\\", "/").rstrip("/") + "/"
+            entry_point_clean = entry_point.replace("\\", "/")
+            if entry_point_clean.startswith(service_path_clean):
+                entry_point = entry_point_clean[len(service_path_clean):]
         
         content = [
             "FROM ruby:3.2-slim AS builder",
