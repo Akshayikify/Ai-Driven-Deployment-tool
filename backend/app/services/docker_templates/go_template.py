@@ -8,7 +8,14 @@ class GoDockerTemplate(DockerTemplate):
         Generates an optimized multi-stage Dockerfile for Go projects.
         Uses a lightweight alpine image for the final runtime.
         """
-        entry_point = findings.get("entry_point", "main.go")
+        entry_point = findings.get("entry_point") or "main.go"
+        service_path = findings.get("path", "")
+        if service_path and service_path != ".":
+            service_path_clean = service_path.replace("\\", "/").rstrip("/") + "/"
+            entry_point_clean = entry_point.replace("\\", "/")
+            if entry_point_clean.startswith(service_path_clean):
+                entry_point = entry_point_clean[len(service_path_clean):]
+
         # Extract binary name from project name or entry point
         name = findings.get("name", "app").lower()
         
