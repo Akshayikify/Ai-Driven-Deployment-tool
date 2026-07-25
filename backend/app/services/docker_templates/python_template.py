@@ -5,7 +5,14 @@ import os
 class PythonDockerTemplate(DockerTemplate):
     def generate_dockerfile(self, findings: Dict[str, Any]) -> str:
         framework = findings.get("framework", "Python (Generic)")
-        entry_point = findings.get("entry_point", "main.py")
+        entry_point = findings.get("entry_point") or "main.py"
+        service_path = findings.get("path", "")
+        if service_path and service_path != ".":
+            service_path_clean = service_path.replace("\\", "/").rstrip("/") + "/"
+            entry_point_clean = entry_point.replace("\\", "/")
+            if entry_point_clean.startswith(service_path_clean):
+                entry_point = entry_point_clean[len(service_path_clean):]
+
         detected = findings.get("detected_files", [])
         
         # Determine port
@@ -62,13 +69,13 @@ class PythonDockerTemplate(DockerTemplate):
 
         if framework == "FastAPI":
             # Strip file extension for uvicorn
-            module = os.path.splitext(entry_point)[0].replace(os.path.sep, ".")
+            module = os.path.splitext(entry_point)[0].replace("\\", ".").replace("/", ".")
             content.append(f'CMD ["uvicorn", "{module}:app", "--host", "0.0.0.0", "--port", "{port}"]')
         elif framework == "Django":
             # Use gunicorn for production; fall back to manage.py runserver if gunicorn not available
             content.append(f'CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:{port} --workers 2 $(python -c \\"import os; [print(f.replace(\\\'/\\\',\\\'.\\\')[:-3]) for f in [\\\'wsgi.py\\\'] if os.path.exists(f)]\\") 2>/dev/null || python manage.py runserver 0.0.0.0:{port}"]')
         elif framework == "Flask":
-            module = os.path.splitext(entry_point)[0].replace(os.path.sep, ".")
+            module = os.path.splitext(entry_point)[0].replace("\\", ".").replace("/", ".")
             content.append(f'ENV FLASK_APP={module}')
             content.append(f'CMD ["flask", "run", "--host=0.0.0.0", "--port={port}"]')
         else:

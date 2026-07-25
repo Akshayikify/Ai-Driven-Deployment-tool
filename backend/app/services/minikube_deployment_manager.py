@@ -42,6 +42,21 @@ def _find_executable(name: str) -> Optional[str]:
     
     # Walk through PATH entries manually to find all candidates
     path_dirs = os.environ.get("PATH", "").split(os.pathsep)
+    
+    # Include standard Windows install locations (handles stale PATH in running servers)
+    local_app_data = os.environ.get("LOCALAPPDATA", "")
+    user_profile = os.environ.get("USERPROFILE", "")
+    common_dirs = [
+        os.path.join(local_app_data, r"Microsoft\WinGet\Links"),
+        r"C:\Program Files\Kubernetes\Minikube",
+        r"C:\Program Files\Docker\Docker\resources\bin",
+        r"C:\Program Files\Kubernetes\kubectl",
+        os.path.join(user_profile, r".minikube\bin"),
+    ]
+    for cd in common_dirs:
+        if cd and cd not in path_dirs:
+            path_dirs.append(cd)
+
     seen = set(candidates)
     for d in path_dirs:
         for ext in ["", ".exe", ".EXE", ".cmd", ".CMD", ".bat", ".BAT"]:
@@ -152,7 +167,7 @@ async def delete_previous_deployment(repo_name_slug: str):
 
 GHCR_SECRET_NAME = "ghcr-pull-secret"
 
-async def ensure_ghcr_pull_secret(token: str) -> bool:
+async def ensure_ghcr_pull_secret(token: str, github_username: str = "oauth2") -> bool:
     """
     Creates (or updates) a Kubernetes `docker-registry` secret so that Minikube
     can pull private images from ghcr.io using the user's GitHub OAuth token.
@@ -179,7 +194,7 @@ async def ensure_ghcr_pull_secret(token: str) -> bool:
     code, stdout, stderr = await run_command([
         "kubectl", "create", "secret", "docker-registry", GHCR_SECRET_NAME,
         "--docker-server=ghcr.io",
-        "--docker-username=oauth2",
+        f"--docker-username={github_username}",
         f"--docker-password={token}",
         "--docker-email=ci@localhost",
     ])
@@ -192,11 +207,11 @@ async def ensure_ghcr_pull_secret(token: str) -> bool:
     # This avoids any command-line quoting issues entirely.
     logger.warning(f"docker-registry method failed ({stderr}), trying --from-file fallback...")
     try:
-        auth_str = base64.b64encode(f"oauth2:{token}".encode()).decode()
+        auth_str = base64.b64encode(f"{github_username}:{token}".encode()).decode()
         docker_config = {
             "auths": {
                 "ghcr.io": {
-                    "username": "oauth2",
+                    "username": github_username,
                     "password": token,
                     "auth": auth_str,
                 }
@@ -551,7 +566,7 @@ async def deploy_to_minikube(task_id: str, repo_name: str, ghcr_image: str, toke
         # 0a. Ensure GHCR pull secret exists so Minikube can pull private images
         pull_secret_name = None
         if token:
-            secret_ok = await ensure_ghcr_pull_secret(token)
+            secret_ok = await ensure_ghcr_pull_secret(token, github_username=owner)
             if secret_ok:
                 pull_secret_name = GHCR_SECRET_NAME
             else:
