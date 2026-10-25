@@ -265,7 +265,9 @@ def generate_k8s_files(config: KubernetesConfig) -> Dict[str, Any]:
     )
 
     # 4. Save YAML files to target directory
-    output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "temp", "k8s"))
+    import tempfile
+    output_dir = os.environ.get("TEMP_K8S_DIR") or os.path.abspath(os.path.join(tempfile.gettempdir(), "auto_deploy_k8s"))
+
 
     saved_paths = save_yaml_files(
         repo_name=config.repo_name,

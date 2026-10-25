@@ -343,6 +343,21 @@ class AnalysisEngine:
             if "manage.py" in detected_signals:
                 findings["framework"] = "Django"
                 findings["confidence"] += 0.3
+                # Discover wsgi.py location to build a deterministic gunicorn module path
+                # e.g. music_main/wsgi.py → music_main.wsgi
+                wsgi_module = None
+                for f in file_index.get("all_files", []):
+                    # Strip leading service_path prefix so path is relative to WORKDIR
+                    rel = f
+                    if service_path and rel.startswith(service_path + "/"):
+                        rel = rel[len(service_path) + 1:]
+                    if rel == "wsgi.py" or rel.endswith("/wsgi.py"):
+                        # Convert path separators and strip .py → dotted module
+                        wsgi_module = rel.replace("\\", "/").replace("/", ".").removesuffix(".py")
+                        break
+                if wsgi_module:
+                    findings["django_wsgi_module"] = wsgi_module
+                    logger.debug(f"Detected Django wsgi module: {wsgi_module}")
             
             # Read requirements.txt if present to populate dependencies
             if "requirements.txt" in detected_signals:
@@ -373,6 +388,64 @@ class AnalysisEngine:
                             findings["confidence"] += 0.3
                 except Exception as e:
                     logger.error(f"Error parsing requirements.txt at {service_path}: {e}")
+            else:
+                # No requirements.txt found — scan .py files for third-party imports to construct dependencies
+                try:
+                    stdlib = {
+                        "os", "sys", "re", "json", "time", "datetime", "math", "random", "typing",
+                        "collections", "itertools", "functools", "pathlib", "shutil", "stat", "io",
+                        "subprocess", "threading", "multiprocessing", "logging", "hashlib", "base64",
+                        "urllib", "http", "socket", "asyncio", "inspect", "copy", "tempfile", "glob",
+                        "uuid", "abc", "contextlib", "unittest", "zoneinfo", "email", "enum", "csv",
+                        "sqlite3", "pickle", "traceback", "queue", "signal", "platform", "select",
+                        "concurrent", "argparse", "optparse", "cgi", "html", "xml", "wsgiref"
+                    }
+                    detected_imports = set()
+                    target_scan_dir = os.path.join(workspace_path, service_path) if service_path else workspace_path
+                    for root, dirs, files in os.walk(target_scan_dir):
+                        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("venv", "env", "aienv", "__pycache__")]
+                        for file in files:
+                            if file.endswith(".py"):
+                                try:
+                                    with open(os.path.join(root, file), "r", encoding="utf-8", errors="ignore") as pf:
+                                        for line in pf:
+                                            line = line.strip()
+                                            if line.startswith("import ") or line.startswith("from "):
+                                                parts = line.split()
+                                                if len(parts) >= 2:
+                                                    mod = parts[1].split(".")[0].strip()
+                                                    if mod and mod.lower() not in stdlib:
+                                                        detected_imports.add(mod.lower())
+                                except Exception:
+                                    pass
+
+                    # Filter out local directory / module names in target_scan_dir
+                    local_names = set()
+                    try:
+                        for entry in os.listdir(target_scan_dir):
+                            local_names.add(entry.lower().removesuffix(".py"))
+                    except Exception:
+                        pass
+
+                    third_party = {m for m in detected_imports if m not in local_names}
+                    
+                    # Detect framework from imports if still Unknown
+                    if "django" in third_party: findings["framework"] = "Django"
+                    elif "fastapi" in third_party: findings["framework"] = "FastAPI"
+                    elif "flask" in third_party: findings["framework"] = "Flask"
+
+                    # Add standard runtime requirements for the framework
+                    if findings.get("framework") == "Django":
+                        third_party.update(["django", "gunicorn"])
+                    elif findings.get("framework") == "FastAPI":
+                        third_party.update(["fastapi", "uvicorn"])
+                    elif findings.get("framework") == "Flask":
+                        third_party.update(["flask", "gunicorn"])
+
+                    findings["dependencies"] = sorted(list(third_party))
+                    logger.info(f"Auto-discovered Python dependencies from imports for {service_path or '.'}: {findings['dependencies']}")
+                except Exception as scan_err:
+                    logger.debug(f"Error scanning Python imports: {scan_err}")
 
             if findings["framework"] == "Unknown":
                 if "poetry.lock" in detected_signals or "pyproject.toml" in detected_signals:

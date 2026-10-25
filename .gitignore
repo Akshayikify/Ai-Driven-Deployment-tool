@@ -46,3 +46,7 @@ ENV/
 backend/app/temp/*
 !backend/app/temp/.gitkeep
 scratch/
+
+# Local credentials and generated deployment exports
+frontend/.env
+backend/research_export/

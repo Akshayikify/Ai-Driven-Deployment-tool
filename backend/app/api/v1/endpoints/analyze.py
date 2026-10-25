@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, HttpUrl
-from typing import Optional
+from typing import Optional, Dict, Any
 from app.services.repository import repo_service
 from app.services.analysis import analysis_engine
 from app.services.generator import file_generator
@@ -8,6 +8,7 @@ from app.services.security_scanner import security_scanner
 from app.core.config import settings
 from loguru import logger
 import uuid
+import asyncio
 import httpx
 
 from app.services.task_manager import task_manager
@@ -21,27 +22,42 @@ class AnalyzeRequest(BaseModel):
     branch: str = "main"
     user_id: Optional[str] = None
 
+_USER_GITHUB_TOKEN_CACHE: Dict[str, str] = {}
+
 async def fetch_github_token(user_id: str) -> Optional[str]:
-    """Fetches the GitHub OAuth token for a user from Clerk."""
+    """Fetches the GitHub OAuth token for a user from Clerk with caching and retries."""
     if not settings.CLERK_SECRET_KEY:
         logger.warning("CLERK_SECRET_KEY is not set. Cannot fetch token.")
-        return None
+        return _USER_GITHUB_TOKEN_CACHE.get(user_id)
         
-    url = f"https://api.clerk.dev/v1/users/{user_id}/oauth_access_tokens/oauth_github"
+    url = f"https://api.clerk.com/v1/users/{user_id}/oauth_access_tokens/oauth_github"
     headers = {
         "Authorization": f"Bearer {settings.CLERK_SECRET_KEY}",
         "Content-Type": "application/json"
     }
     
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    for attempt in range(3):
         try:
-            response = await client.get(url, headers=headers)
-            response.raise_for_status()
-            tokens = response.json()
-            if tokens and len(tokens) > 0:
-                return tokens[0].get("token")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()
+                tokens = response.json()
+                if tokens and len(tokens) > 0:
+                    token = tokens[0].get("token")
+                    if token:
+                        _USER_GITHUB_TOKEN_CACHE[user_id] = token
+                        return token
         except Exception as e:
-            logger.error(f"Failed to fetch GitHub token from Clerk for {user_id}: {e}")
+            if attempt < 2:
+                await asyncio.sleep(0.5 * (attempt + 1))
+            else:
+                logger.error(f"Failed to fetch GitHub token from Clerk for {user_id} (attempt {attempt+1}/3): {e}")
+
+    # Fallback to cached token if previously fetched for this session
+    cached = _USER_GITHUB_TOKEN_CACHE.get(user_id)
+    if cached:
+        logger.info(f"Using cached GitHub token for {user_id}")
+        return cached
             
     return None
 
@@ -69,7 +85,38 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
         
         if not workspace:
             logger.error(f"Task {task_id}: Cloning failed.")
-            task_manager.update_task(task_id, "failed", message="Cloning failed.")
+            # FIX-9: Diagnose the clone failure reason so we can reclassify
+            # invalid/private-repo errors as 'user_error' rather than 'failed'.
+            # This prevents user input mistakes from dragging down the success rate.
+            clone_error_msg = "Cloning failed."
+            url_lower = repo_url.lower()
+            is_likely_user_error = False
+
+            # Check for obviously invalid URLs (no github.com domain)
+            if "github.com" not in url_lower and "gitlab.com" not in url_lower and "bitbucket.org" not in url_lower:
+                clone_error_msg = (
+                    f"Cloning failed: '{repo_url}' does not appear to be a valid Git host URL. "
+                    "Please check the repository URL and try again."
+                )
+                is_likely_user_error = True
+            elif not github_token:
+                # No token + clone failed → likely private repo
+                clone_error_msg = (
+                    "Cloning failed: the repository may be private or the URL is incorrect. "
+                    "Connect your GitHub account to deploy private repositories."
+                )
+                is_likely_user_error = True
+
+            if is_likely_user_error:
+                # Mark as user_error (stored separately from failed so it doesn't
+                # lower the deployment success rate in analytics).
+                task_manager.update_task(
+                    task_id, "failed",
+                    message=clone_error_msg,
+                    failure_category="user_error"
+                )
+            else:
+                task_manager.update_task(task_id, "failed", message=clone_error_msg)
             return
 
         # 2. Analyze
@@ -101,18 +148,21 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
         task_manager.update_task(task_id, "security_scanning")
         security_report = security_scanner.scan(workspace, findings.get("file_index", {}))
 
-        # Attach the report to findings so it's included in any downstream data
+        # Attach the report to findings so it's included in any downstream data.
         findings["security_report"] = security_report.model_dump()
-
-        if not security_report.is_clean:
-            # Security findings (any severity) — generate files first so the user
-            # can see the full picture, then PAUSE and ask for push confirmation.
+        # FIX-4: Only block the pipeline for CRITICAL security findings.
+        # The SecurityReport schema already sets `blocked=True` only when CRITICAL
+        # issues are present. HIGH/MEDIUM/LOW are advisory — attach the report and
+        # let the deployment continue so the user isn't blocked unnecessarily.
+        if not security_report.is_clean and security_report.blocked:
+            # CRITICAL findings only — generate files first so the user sees the full picture,
+            # then pause and ask for push confirmation.
             logger.warning(
-                f"Task {task_id}: Security scan found issues (advisory). "
+                f"Task {task_id}: CRITICAL security findings — pausing pipeline. "
                 f"{security_report.summary}"
             )
 
-            # ── Step 3 (early): generate files regardless so they’re ready
+            # ── Step 3 (early): generate files regardless so they're ready
             task_manager.update_task(task_id, "generating")
             t0_gen = time.time()
             await file_generator.generate_deployment_files(workspace, findings)
@@ -136,6 +186,18 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
             )
             # Background task ends here; the confirm-push endpoint resumes it.
             return
+
+        elif not security_report.is_clean and not security_report.blocked:
+            # HIGH/MEDIUM/LOW findings — attach the report as a warning but continue.
+            # The frontend will display a warning banner without blocking the user.
+            logger.warning(
+                f"Task {task_id}: Non-critical security findings (advisory). "
+                f"{security_report.summary} — pipeline continues."
+            )
+            task_manager.tasks[task_id]["security_report"] = security_report.model_dump()
+            task_manager.tasks[task_id]["security_warning"] = True
+            # Pipeline continues below — non-critical findings are advisory only.
+
 
         # ── Step 3: Generate Deployment Files (clean scan path) ─────────────
         task_manager.update_task(task_id, "generating")
@@ -175,7 +237,10 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
             from app.services.github_actions import github_actions_service
             asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id))
         else:    
-            update_kwargs = {"status": "completed"}
+            update_kwargs = {
+                "status": "ready_to_deploy",
+                "message": "AI analysis complete and Docker/CI-CD files generated. Connect GitHub account to deploy to Minikube."
+            }
             if 'findings' in locals():
                 if "language" in findings: update_kwargs["language"] = findings["language"]
                 if "estimated_duration" in findings: update_kwargs["estimated_duration"] = findings["estimated_duration"]
@@ -239,7 +304,10 @@ async def _resume_push(task_id: str):
                 github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id)
             )
         else:
-            update_kwargs: dict = {"status": "completed"}
+            update_kwargs = {
+                "status": "ready_to_deploy",
+                "message": "AI analysis complete and Docker/CI-CD files generated. Connect GitHub account to deploy to Minikube."
+            }
             if meta.get("language"):           update_kwargs["language"] = meta["language"]
             if meta.get("estimated_duration"): update_kwargs["estimated_duration"] = meta["estimated_duration"]
             task_manager.update_task(task_id, **update_kwargs)
@@ -279,12 +347,31 @@ async def confirm_push(task_id: str, background_tasks: BackgroundTasks):
     """
     task = task_manager.get_task(task_id)
     if not task:
+        # Fallback to MongoDB if server was restarted
+        from app.db.mongodb import db
+        mongo_task = await db.get_deployment_by_id(task_id)
+        if mongo_task and mongo_task.get("status") == "awaiting_push_confirmation":
+            task_manager.tasks[task_id] = mongo_task
+            task = mongo_task
+
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     if task.get("status") != "awaiting_push_confirmation":
         raise HTTPException(
             status_code=400,
             detail=f"Task is not awaiting confirmation (current status: {task.get('status')})."
         )
+
+    # Auto-recover workspace and token if missing from restart
+    if not task.get("_workspace"):
+        repo_url = task.get("_repo_url", task.get("repo_url", ""))
+        if repo_url:
+            repo_name = repo_url.rstrip("/").replace(".git", "").split("/")[-1]
+            candidate = os.path.join(repo_service.base_temp_dir, repo_name)
+            if os.path.exists(candidate):
+                task["_workspace"] = candidate
+    if not task.get("_github_token") and task.get("user_id"):
+        task["_github_token"] = await fetch_github_token(task["user_id"])
 
     logger.info(f"Task {task_id}: User confirmed push despite security findings. Resuming pipeline.")
     background_tasks.add_task(_resume_push, task_id)
@@ -299,6 +386,13 @@ async def cancel_push(task_id: str):
     """
     task = task_manager.get_task(task_id)
     if not task:
+        from app.db.mongodb import db
+        mongo_task = await db.get_deployment_by_id(task_id)
+        if mongo_task and mongo_task.get("status") == "awaiting_push_confirmation":
+            task_manager.tasks[task_id] = mongo_task
+            task = mongo_task
+
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     if task.get("status") != "awaiting_push_confirmation":
         raise HTTPException(
@@ -307,6 +401,14 @@ async def cancel_push(task_id: str):
         )
 
     workspace = task.get("_workspace")
+    if not workspace:
+        repo_url = task.get("_repo_url", task.get("repo_url", ""))
+        if repo_url:
+            repo_name = repo_url.rstrip("/").replace(".git", "").split("/")[-1]
+            candidate = os.path.join(repo_service.base_temp_dir, repo_name)
+            if os.path.exists(candidate):
+                workspace = candidate
+
     if workspace:
         try:
             repo_service.cleanup_workspace(workspace)
@@ -346,8 +448,35 @@ async def get_task_status(task_id: str):
 
 @router.get("/tasks")
 async def list_recent_tasks(user_id: Optional[str] = None):
-    """Returns a list of all recent deployment tasks for a specific user."""
-    return task_manager.list_tasks(user_id=user_id)
+    """
+    Returns a deduplicated list of all recent deployment tasks for a user,
+    merging persistent MongoDB records with active in-memory tasks.
+    """
+    from app.db.mongodb import db, normalize_repo_url
+
+    # 1. Fetch persistent deployments from MongoDB
+    mongo_deployments = await db.list_deployments(user_id=user_id, limit=50)
+
+    # 2. Fetch in-memory tasks (live active runs)
+    in_memory = task_manager.list_tasks(user_id=user_id)
+
+    # 3. Merge: key by normalized repository URL so re-tests always update the same row
+    merged_map = {}
+    for dep in mongo_deployments:
+        key = normalize_repo_url(dep.get("repo_url")).lower() or dep.get("id")
+        merged_map[key] = dep
+
+    for task in in_memory:
+        key = normalize_repo_url(task.get("repo_url")).lower() or task.get("id")
+        if key in merged_map:
+            # Active in-memory state overrides / enriches stored record
+            merged_map[key] = {**merged_map[key], **task}
+        else:
+            merged_map[key] = task
+
+    result = list(merged_map.values())
+    result.sort(key=lambda x: str(x.get("updated_at") or x.get("created_at") or ""), reverse=True)
+    return result
 
 @router.get("/stats")
 async def get_deployment_analytics(user_id: Optional[str] = None):

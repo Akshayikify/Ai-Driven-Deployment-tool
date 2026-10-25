@@ -158,7 +158,7 @@ class AIService:
         - Java (Builder): maven:3-eclipse-temurin-17-alpine, maven:3.8-openjdk-11-slim
         - Java (Runtime): eclipse-temurin:17-jre-alpine, eclipse-temurin:11-jre-focal
         - Node.js: node:18-alpine, node:20-slim, node:16-bullseye-slim
-        - Python: python:3.11-slim, python:3.9-alpine, python:3.10-bookworm
+        - Python: python:3.11-slim, python:3.10-slim (NEVER use alpine for Python web applications)
         - Go: golang:1.21-alpine, golang:1.20-bookworm
         - PHP: php:8.2-fpm-alpine, php:8.1-apache
 
@@ -166,9 +166,12 @@ class AIService:
         - If 'mvn' not found: Use a 'maven' builder image.
         - If 'mvnw' permission denied: Add 'chmod +x mvnw' before running.
         - If 'javac' not found: Use a 'jdk' image, not 'jre'.
+        - If 'gunicorn: not found' or 'No module named <pkg>': Ensure the package is installed via 'pip install' in Dockerfile or listed in requirements.txt. Retain the existing WSGI/ASGI module from the original Dockerfile.
 
         CRITICAL CONSTRAINTS:
         - NEVER suggest 'fixing the Maven version URL protocol' if the error is a generic 'exit code: 1' during compilation.
+        - For Python apps: NEVER use alpine images (they lack glibc/C headers). Always use 'python:3.11-slim'.
+        - If requirements.txt is not in the repository, DO NOT use 'COPY requirements.txt .' in Dockerfile without also creating requirements.txt via action 'create_file'.
         - Always provide the FULL content of any file you create or modify, not just a snippet.
         - Do NOT remove or bypass critical deployment stages such as 'Build and push Docker image', 'Log in to the Container registry', or 'Extract metadata'.
         - If an image tag is 'Not Found', cross-check with the Verified Knowledge Base above and use an alpine or full version.

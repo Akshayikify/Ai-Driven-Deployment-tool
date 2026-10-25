@@ -1,23 +1,17 @@
 import asyncio
-import os
-from motor.motor_asyncio import AsyncIOMotorClient
-from dotenv import load_dotenv
+from app.db.mongodb import db
 
 async def test_connection():
-    load_dotenv()
-    uri = os.getenv("MONGO_URI")
-    db_name = os.getenv("MONGO_DB_NAME", "ai_deployment_tool")
-    
-    print(f"Testing connection to {uri}...")
-    try:
-        client = AsyncIOMotorClient(uri)
-        print("Pinging...")
-        await client.admin.command('ping')
-        print("Ping successful!")
-        db = client[db_name]
-        print(f"Connected to database: {db_name}")
-    except Exception as e:
-        print(f"Connection failed: {e}")
+    print("Testing connection via app.db.mongodb...")
+    await db.connect_to_mongo()
+    if db.client:
+        print("Database connected successfully!")
+        # Test inserting and fetching a ping document
+        res = await db.verify_connection()
+        print("Database verify_connection:", res)
+    else:
+        print("Database connection failed.")
 
 if __name__ == "__main__":
     asyncio.run(test_connection())
+

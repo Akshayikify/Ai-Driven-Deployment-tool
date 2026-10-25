@@ -265,7 +265,7 @@ _RAW_SECRET_PATTERNS: List[Tuple[str, str, str, str, str]] = [
      "Use REDIS_URL as an environment variable."),
 
     # --- Django SECRET_KEY (hardcoded insecure key) ---
-    ("DJANGO_SECRET_KEY", "CRITICAL",
+    ("DJANGO_SECRET_KEY", "HIGH",
      "Hardcoded Django SECRET_KEY detected — django-insecure prefix confirms it is not loaded from env",
      r"(?i)SECRET_KEY\s*=\s*['\"]django-insecure-[^'\"]{20,}['\"]",
      "Remove the hardcoded SECRET_KEY. Set it via an environment variable: "

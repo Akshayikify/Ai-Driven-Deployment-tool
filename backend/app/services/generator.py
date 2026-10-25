@@ -46,6 +46,42 @@ class FileGenerator:
             if not os.path.exists(service_abs_path):
                 os.makedirs(service_abs_path, exist_ok=True)
                 
+            # Ensure Python service has requirements.txt if no manifest exists
+            if service.get("language") == "Python":
+                has_manifest = any(
+                    os.path.exists(os.path.join(service_abs_path, m))
+                    for m in ("requirements.txt", "pyproject.toml", "Pipfile")
+                )
+                if not has_manifest:
+                    framework = service.get("framework")
+                    deps = service.get("dependencies") or []
+                    default_deps = []
+                    if framework == "Django":
+                        default_deps = ["django>=4.2,<5.0", "gunicorn>=21.2.0"]
+                    elif framework == "FastAPI":
+                        default_deps = ["fastapi>=0.100.0", "uvicorn[standard]>=0.23.0"]
+                    elif framework == "Flask":
+                        default_deps = ["flask>=2.3.0", "gunicorn>=21.2.0"]
+
+                    final_deps = list(default_deps)
+                    existing_lower = {d.split(">=")[0].split("<")[0].lower() for d in final_deps}
+                    for d in deps:
+                        d_name = d.split(">=")[0].split("<")[0].lower()
+                        if d_name not in existing_lower:
+                            final_deps.append(d)
+                            existing_lower.add(d_name)
+
+                    req_file = os.path.join(service_abs_path, "requirements.txt")
+                    try:
+                        with open(req_file, "w") as rf:
+                            rf.write("\n".join(final_deps) + "\n")
+                        logger.info(f"Auto-generated requirements.txt for {service.get('name')}: {final_deps}")
+                        det = service.setdefault("detected_files", [])
+                        if "requirements.txt" not in det:
+                            det.append("requirements.txt")
+                    except Exception as rf_err:
+                        logger.warning(f"Failed to generate requirements.txt: {rf_err}")
+
             df_s = await self.generate_dockerfile(service_abs_path, service)
             di_s = self.generate_dockerignore(service_abs_path, service)
             success = success and (df_s or os.path.exists(os.path.join(service_abs_path, "Dockerfile")))

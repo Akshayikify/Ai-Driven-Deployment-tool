@@ -6,6 +6,8 @@ class TaskManager:
     def __init__(self):
         # In-memory store for now. In production, use Redis or Database.
         self.tasks: Dict[str, Any] = {}
+        # Alias map: old_task_id -> new_task_id when a repo is re-tested
+        self.task_aliases: Dict[str, str] = {}
 
     def update_task(self, task_id: str, status: str, message: str = "", user_id: Optional[str] = None, **kwargs):
         """
@@ -13,12 +15,27 @@ class TaskManager:
         Status options: 'cloning', 'analyzing', 'generating', 'pushing', 'building', 'deploying', 'completed', 'failed'
         """
         if task_id not in self.tasks:
+            repo_url = kwargs.get("repo_url", "Unknown")
+            
+            # If re-testing an existing repo, clean up any previous in-memory task for that repo
+            if repo_url and repo_url != "Unknown":
+                from app.db.mongodb import normalize_repo_url
+                clean_target = normalize_repo_url(repo_url).lower()
+                if clean_target:
+                    stale_ids = [
+                        tid for tid, t in self.tasks.items()
+                        if normalize_repo_url(t.get("repo_url")).lower() == clean_target and tid != task_id
+                    ]
+                    for stale_id in stale_ids:
+                        self.task_aliases[stale_id] = task_id
+                        self.tasks.pop(stale_id, None)
+
             self.tasks[task_id] = {
                 "id": task_id,
                 "user_id": user_id,
                 "created_at": datetime.datetime.now().isoformat(),
                 "start_time": datetime.datetime.now(),
-                "repo_url": kwargs.get("repo_url", "Unknown"),
+                "repo_url": repo_url,
                 "environment": kwargs.get("environment", "production"),
                 "commit": kwargs.get("commit", "N/A"),
                 "duration": kwargs.get("duration", "-"),
@@ -139,6 +156,17 @@ class TaskManager:
                     task["duration"] = f"{seconds}s"
                 else:
                     task["duration"] = f"{seconds // 60}m {seconds % 60}s"
+        elif status == "ready_to_deploy":
+            self._update_step(task, "upload", "completed")
+            self._update_step(task, "analyze", "completed")
+            self._update_step(task, "security", "completed")
+            self._update_step(task, "build", "pending")
+            task["current_message"] = message or "AI analysis complete and deployment files generated."
+            task["status"] = "ready_to_deploy"
+            if "start_time" in task:
+                diff = datetime.datetime.now() - task["start_time"]
+                seconds = int(diff.total_seconds())
+                task["duration"] = f"{seconds}s" if seconds < 60 else f"{seconds // 60}m {seconds % 60}s"
         elif status == "completed":
             self._update_step(task, "analyze", "completed")
             self._update_step(task, "build", "completed")
@@ -179,11 +207,10 @@ class TaskManager:
         logger.debug(f"Task {task_id} updated to {status}")
         
         # Async sync to MongoDB for analytics and history.
-        # Skip storage if the task has security warnings — those are advisory only
-        # and must not pollute the deployments collection with false failures.
+        # Skip storage if the task is in an advisory / pre-deployment state.
         import asyncio
         from app.db.mongodb import db
-        _skip_statuses = {"security_warning", "awaiting_push_confirmation"}
+        _skip_statuses = {"security_warning", "awaiting_push_confirmation", "ready_to_deploy"}
         if task.get("status") in _skip_statuses:
             logger.debug(
                 f"Task {task_id}: Skipping MongoDB sync — status is '{task.get('status')}' "
@@ -191,7 +218,8 @@ class TaskManager:
             )
         else:
             try:
-                asyncio.create_task(db.store_deployment_data(task))
+                # Pass a snapshot copy to avoid in-flight mutation race conditions
+                asyncio.create_task(db.store_deployment_data(task.copy()))
             except Exception as e:
                 logger.warning(f"Failed to trigger MongoDB sync for task {task_id}: {e}")
 
@@ -207,12 +235,30 @@ class TaskManager:
                 break
 
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
-        return self.tasks.get(task_id)
+        if task_id in self.tasks:
+            return self.tasks[task_id]
+        # Fallback to alias if an older task was superseded by a re-test
+        aliased_id = self.task_aliases.get(task_id)
+        if aliased_id and aliased_id in self.tasks:
+            return self.tasks[aliased_id]
+        return None
 
     def list_tasks(self, user_id: Optional[str] = None) -> list:
-        all_tasks = self.tasks.values()
+        from app.db.mongodb import normalize_repo_url
+        all_tasks = list(self.tasks.values())
         if user_id:
             all_tasks = [t for t in all_tasks if t.get("user_id") == user_id]
-        return sorted(all_tasks, key=lambda x: x.get("created_at", ""), reverse=True)
+
+        # Deduplicate by normalized repo_url so only the latest run for each repo is returned
+        seen_repos = set()
+        deduped = []
+        for t in sorted(all_tasks, key=lambda x: str(x.get("updated_at") or x.get("created_at") or ""), reverse=True):
+            r_url = normalize_repo_url(t.get("repo_url")).lower()
+            if r_url:
+                if r_url in seen_repos:
+                    continue
+                seen_repos.add(r_url)
+            deduped.append(t)
+        return deduped
 
 task_manager = TaskManager()

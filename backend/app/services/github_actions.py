@@ -130,10 +130,16 @@ class GitHubActionsService:
                     return False
         return True
 
-    async def monitor_workflow(self, repo_url: str, token: str, task_id: Optional[str] = None):
+    async def monitor_workflow(
+        self,
+        repo_url: str,
+        token: str,
+        task_id: Optional[str] = None,
+        is_retry: bool = False,       # FIX-7: prevents infinite auto-fix → re-monitor loops
+    ):
         """
         Monitors a newly triggered GitHub Actions workflow and logs the progress natively.
-        Also updates the TaskManager if task_id is provideed.
+        Also updates the TaskManager if task_id is provided.
         """
         from app.services.task_manager import task_manager
         
@@ -149,18 +155,30 @@ class GitHubActionsService:
         owner = parts[-2]
         repo = parts[-1]
 
-        logger.info(f"🚀 Initializing GitHub Actions Monitor for {owner}/{repo}...")
+        logger.info(f"Initializing GitHub Actions Monitor for {owner}/{repo}...")
         if task_id:
             task_manager.update_task(task_id, "building", message="Initializing GitHub Actions monitor...")
         
-        # Give GitHub a few seconds to register the fresh push
-        await asyncio.sleep(5)
-        
-        run = await self._get_latest_workflow_run(owner, repo, token)
+        # FIX-1: Retry for up to 60 s — GitHub can take 5–30 s to register a new workflow
+        # run after a push. The old code waited only 5 s then gave up immediately.
+        run = None
+        for attempt in range(12):          # 12 × 5 s = 60 s max
+            await asyncio.sleep(5)
+            run = await self._get_latest_workflow_run(owner, repo, token)
+            if run:
+                break
+            logger.info(
+                f"[Monitor] No workflow run visible yet (attempt {attempt + 1}/12), "
+                f"retrying in 5 s..."
+            )
+
         if not run:
-            logger.warning("Could not find a recent GitHub Actions workflow run.")
+            logger.warning("Could not find a recent GitHub Actions workflow run after 60 s.")
             if task_id:
-                task_manager.update_task(task_id, "failed", message="Could not find a recent GitHub Actions workflow run.")
+                task_manager.update_task(
+                    task_id, "failed",
+                    message="Could not find a recent GitHub Actions workflow run."
+                )
             return
             
         run_id = run["id"]
@@ -271,10 +289,48 @@ class GitHubActionsService:
                             )
                             if diagnosis_json:
                                 logger.info(f"[AUTO_FIX_PAYLOAD] {diagnosis_json}")
-                                # Store the auto-fix actions/diagnosis in the task for reload resilience
                                 try:
-                                    import json
-                                    auto_fix_data = json.loads(diagnosis_json)
+                                    import json as _json
+                                    auto_fix_data = _json.loads(diagnosis_json)
+                                    fix_actions = auto_fix_data.get("actions", [])
+
+                                    # FIX-7: Automatically apply the AI auto-fix on first failure
+                                    # (is_retry guard prevents an infinite loop).
+                                    if fix_actions and token and not is_retry:
+                                        logger.info(
+                                            "[AI Agent] Automatically applying auto-fix patch "
+                                            f"({len(fix_actions)} file(s)) to {owner}/{repo}..."
+                                        )
+                                        applied = await self.apply_auto_fix(
+                                            owner, repo, token, fix_actions
+                                        )
+                                        if applied:
+                                            logger.info(
+                                                "[AI Agent] Auto-fix applied successfully. "
+                                                "Re-triggering pipeline monitor..."
+                                            )
+                                            if task_id:
+                                                task_manager.update_task(
+                                                    task_id, "building",
+                                                    message="AI auto-fix applied. Waiting for new pipeline run..."
+                                                )
+                                            # Wait for GitHub to register the commit, then re-monitor
+                                            await asyncio.sleep(15)
+                                            asyncio.create_task(
+                                                self.monitor_workflow(
+                                                    repo_url, token,
+                                                    task_id=task_id,
+                                                    is_retry=True,  # prevent further auto-fix loops
+                                                )
+                                            )
+                                            return  # this invocation ends; retry takes over
+                                        else:
+                                            logger.warning(
+                                                "[AI Agent] Auto-fix patch failed to apply. "
+                                                "Marking task as failed with suggestion."
+                                            )
+
+                                    # Store auto-fix data on task for manual frontend trigger
                                     if task_id and task_id in task_manager.tasks:
                                         task_manager.tasks[task_id]["auto_fix"] = auto_fix_data
                                         task_manager.update_task(

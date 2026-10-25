@@ -39,15 +39,41 @@ class PythonDockerTemplate(DockerTemplate):
         # so packages land in /usr/local/lib and are available to any user in final stage
         if "requirements.txt" in detected:
             content.append("COPY requirements.txt .")
-            content.append("RUN pip install --no-cache-dir -r requirements.txt")
+            if framework in ("Django", "Flask"):
+                content.append("RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir gunicorn")
+            elif framework == "FastAPI":
+                content.append("RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir 'uvicorn[standard]'")
+            else:
+                content.append("RUN pip install --no-cache-dir -r requirements.txt")
         elif "pyproject.toml" in detected:
             content.append("COPY pyproject.toml .")
             if "poetry.lock" in detected:
                 content.append("COPY poetry.lock .")
             content.append("RUN pip install --no-cache-dir .")
+            if framework in ("Django", "Flask"):
+                content.append("RUN pip install --no-cache-dir gunicorn")
+            elif framework == "FastAPI":
+                content.append("RUN pip install --no-cache-dir 'uvicorn[standard]'")
         elif "Pipfile" in detected:
             content.append("COPY Pipfile* .")
             content.append("RUN pip install --no-cache-dir pipenv && pipenv install --system")
+            if framework in ("Django", "Flask"):
+                content.append("RUN pip install --no-cache-dir gunicorn")
+            elif framework == "FastAPI":
+                content.append("RUN pip install --no-cache-dir 'uvicorn[standard]'")
+        else:
+            deps_list = findings.get("dependencies") or []
+            if framework == "Django":
+                extra = " ".join([d for d in deps_list if d not in ("django", "gunicorn")])
+                content.append(f"RUN pip install --no-cache-dir django gunicorn {extra}".strip())
+            elif framework == "FastAPI":
+                extra = " ".join([d for d in deps_list if d not in ("fastapi", "uvicorn")])
+                content.append(f"RUN pip install --no-cache-dir fastapi 'uvicorn[standard]' {extra}".strip())
+            elif framework == "Flask":
+                extra = " ".join([d for d in deps_list if d not in ("flask", "gunicorn")])
+                content.append(f"RUN pip install --no-cache-dir flask gunicorn {extra}".strip())
+            else:
+                content.append("RUN pip install --no-cache-dir gunicorn")
 
         content.extend([
             "",
@@ -72,8 +98,23 @@ class PythonDockerTemplate(DockerTemplate):
             module = os.path.splitext(entry_point)[0].replace("\\", ".").replace("/", ".")
             content.append(f'CMD ["uvicorn", "{module}:app", "--host", "0.0.0.0", "--port", "{port}"]')
         elif framework == "Django":
-            # Use gunicorn for production; fall back to manage.py runserver if gunicorn not available
-            content.append(f'CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:{port} --workers 2 $(python -c \\"import os; [print(f.replace(\\\'/\\\',\\\'.\\\')[:-3]) for f in [\\\'wsgi.py\\\'] if os.path.exists(f)]\\") 2>/dev/null || python manage.py runserver 0.0.0.0:{port}"]')
+            # Django requires ALLOWED_HOSTS and SECRET_KEY in a containerised environment.
+            # These can be overridden at deploy time via Kubernetes env vars.
+            content.insert(content.index(f"EXPOSE {port}"), "ENV ALLOWED_HOSTS=\"*\"")
+            content.insert(content.index(f"EXPOSE {port}"), "ENV DJANGO_SETTINGS_MODULE=\"\"")
+
+            wsgi_module = findings.get("django_wsgi_module", "")
+            if wsgi_module:
+                # Fully deterministic: gunicorn with the known wsgi module, no shell introspection.
+                content.append(
+                    f'CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:{port} --workers 2 {wsgi_module} || python manage.py runserver 0.0.0.0:{port}"]'
+                )
+            else:
+                # Fallback when wsgi module couldn't be determined at analysis time.
+                # Use a simple shell loop – no subshell $() to avoid /bin/sh parse errors.
+                content.append(
+                    f'CMD ["python", "manage.py", "runserver", "0.0.0.0:{port}"]'
+                )
         elif framework == "Flask":
             module = os.path.splitext(entry_point)[0].replace("\\", ".").replace("/", ".")
             content.append(f'ENV FLASK_APP={module}')

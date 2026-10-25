@@ -25,18 +25,24 @@ async def sync_clerk_user(
     clerk_url = f"https://api.clerk.com/v1/users/{clerk_id}"
     headers = {"Authorization": f"Bearer {settings.CLERK_SECRET_KEY}"}
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(clerk_url, headers=headers)
-        if response.status_code != 200:
-            logger.error(f"Failed to fetch user from Clerk: {response.text}")
-            raise HTTPException(status_code=response.status_code, detail="Failed to fetch user data from Clerk")
-        
-        clerk_user = response.json()
+    clerk_user = {}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(clerk_url, headers=headers)
+            if response.status_code == 200:
+                clerk_user = response.json()
+            else:
+                logger.warning(f"Clerk API returned status {response.status_code}: {response.text}")
+    except httpx.TimeoutException:
+        logger.warning(f"Clerk API request timed out for user {clerk_id}. Falling back to basic record.")
+    except Exception as e:
+        logger.warning(f"Could not reach Clerk API for user {clerk_id}: {e}. Falling back to basic record.")
 
-    # Extract relevant fields
-    email = next((e["email_address"] for e in clerk_user.get("email_addresses", [])), None)
+    # Extract relevant fields (with safe fallbacks)
+    email = next((e["email_address"] for e in clerk_user.get("email_addresses", [])), None) if clerk_user else None
     if not email:
-        raise HTTPException(status_code=400, detail="User has no email address associated in Clerk")
+        email = f"{clerk_id}@user.local"
+
 
     user_payload = {
         "clerk_id": clerk_id,

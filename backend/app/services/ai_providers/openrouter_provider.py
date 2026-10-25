@@ -11,6 +11,7 @@ class OpenRouterProvider(AIProvider):
             self.client = AsyncOpenAI(
                 base_url="https://openrouter.ai/api/v1",
                 api_key=self.api_key,
+                timeout=120.0,
             )
             # Use configured OpenRouter model
             self.model = settings.OPENROUTER_MODEL
