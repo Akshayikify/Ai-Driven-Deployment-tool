@@ -20,7 +20,7 @@ class GoDockerTemplate(DockerTemplate):
         name = findings.get("name", "app").lower()
         
         return f"""# Build Stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
@@ -72,9 +72,9 @@ Dockerfile
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
   test:
@@ -122,7 +122,7 @@ jobs:
         with:
           images: ghcr.io/${{{{ env.IMAGE_ID }}}}
           tags: |
-            type=raw,value=latest,enable=${{{{ github.ref == 'refs/heads/main' }}}}
+            type=raw,value=latest,enable=${{{{ github.ref == format('refs/heads/{{0}}', github.event.repository.default_branch) }}}}
             type=sha,prefix=sha-,format=short
 
       - name: Build and push Docker image

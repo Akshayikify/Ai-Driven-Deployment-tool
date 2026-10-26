@@ -1,0 +1,20 @@
+{
+  "app": "python-fastapi",
+  "repo": "theakashainapur/tb-python-fastapi",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "Python",
+  "commit": "5dd2344",
+  "deployment_url": "http://127.0.0.1:49818",
+  "pod_name": "tb-python-fastapi-6ff55c6fbd-qm8w2",
+  "http_status": 200,
+  "http_body": "{\"status\":\"ok\"}",
+  "ci_runs": [
+    {
+      "sha": "5dd2344",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 479
+}

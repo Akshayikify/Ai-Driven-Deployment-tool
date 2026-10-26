@@ -11,6 +11,7 @@ from .docker_templates.java_template import JavaDockerTemplate
 from .docker_templates.ruby_template import RubyDockerTemplate
 from .docker_templates.rust_template import RustDockerTemplate
 from .docker_templates.go_template import GoDockerTemplate
+from .docker_templates.static_template import StaticDockerTemplate
 from .docker_templates.llm_template import LLMDockerTemplate
 
 class FileGenerator:
@@ -22,7 +23,8 @@ class FileGenerator:
             "Java": JavaDockerTemplate(),
             "Ruby": RubyDockerTemplate(),
             "Rust": RustDockerTemplate(),
-            "Go": GoDockerTemplate()
+            "Go": GoDockerTemplate(),
+            "HTML/Static": StaticDockerTemplate(),
         }
 
     def _get_strategy(self, findings: Dict[str, Any]):
@@ -302,9 +304,9 @@ class FileGenerator:
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 concurrency:
   group: ${{{{ github.workflow }}}}-${{{{ github.ref }}}}

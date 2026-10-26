@@ -1,0 +1,20 @@
+{
+  "app": "static-html",
+  "repo": "theakashainapur/tb-static-html",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "HTML/Static",
+  "commit": "a895cbb",
+  "deployment_url": "http://127.0.0.1:49835",
+  "pod_name": "tb-static-html-945596f85-fs9k2",
+  "http_status": 200,
+  "http_body": "<!doctype html>\n<html><body><h1>ok</h1></body></html>\n",
+  "ci_runs": [
+    {
+      "sha": "a895cbb",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 175
+}

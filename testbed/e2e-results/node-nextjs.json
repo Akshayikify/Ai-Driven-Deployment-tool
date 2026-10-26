@@ -1,0 +1,20 @@
+{
+  "app": "node-nextjs",
+  "repo": "theakashainapur/tb-node-nextjs",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "JavaScript/TypeScript",
+  "commit": "508a07e",
+  "deployment_url": "http://127.0.0.1:60719",
+  "pod_name": "tb-node-nextjs-7dbfb7b87-fgqhq",
+  "http_status": 200,
+  "http_body": "<!DOCTYPE html><html><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=",
+  "ci_runs": [
+    {
+      "sha": "508a07e",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 1480
+}

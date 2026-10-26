@@ -114,7 +114,8 @@ class AIService:
         logs: str,
         repo_url: str,
         workflow_path: str = None,
-        file_contexts: Optional[Dict[str, str]] = None
+        file_contexts: Optional[Dict[str, str]] = None,
+        context_hint: str = ""
     ) -> Optional[str]:
         """
         Analyzes failed GitHub Actions logs and provides a strict JSON payload with diagnosis and file fixes.
@@ -125,7 +126,8 @@ class AIService:
         # Truncate logs to avoid massive context window payloads
         truncated_logs = logs[-8000:] if len(logs) > 8000 else logs
 
-        context_hint = f" The original workflow filename was identified as: {workflow_path}." if workflow_path else ""
+        extra_hint = f" The original workflow filename was identified as: {workflow_path}." if workflow_path else ""
+        context_hint = extra_hint + (context_hint or "")
 
         files_context_str = ""
         if file_contexts:

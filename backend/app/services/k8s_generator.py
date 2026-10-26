@@ -75,7 +75,7 @@ def recommend_replicas(project_type: Optional[str] = None) -> int:
     else:
         return 2
 
-def generate_deployment_yaml(repo_name: str, ghcr_image: str, container_port: int, replicas: int = 2, pull_secret_name: Optional[str] = None, image_pull_policy: str = "Always") -> str:
+def generate_deployment_yaml(repo_name: str, ghcr_image: str, container_port: int, replicas: int = 1, pull_secret_name: Optional[str] = None, image_pull_policy: str = "Always") -> str:
     """
     Generates a Kubernetes deployment manifest dynamically using PyYAML.
     If pull_secret_name is provided, imagePullSecrets is added to the pod spec
@@ -93,7 +93,16 @@ def generate_deployment_yaml(repo_name: str, ghcr_image: str, container_port: in
                     {
                         "containerPort": container_port
                     }
-                ]
+                ],
+                # Many frameworks read PORT; keep it in step with the exposed port.
+                "env": [{"name": "PORT", "value": str(container_port)}],
+                # Only report Ready once the app is actually listening.
+                "readinessProbe": {
+                    "tcpSocket": {"port": container_port},
+                    "initialDelaySeconds": 3,
+                    "periodSeconds": 3,
+                    "failureThreshold": 20,
+                },
             }
         ]
     }

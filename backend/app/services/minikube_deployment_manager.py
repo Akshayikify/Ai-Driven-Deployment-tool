@@ -530,6 +530,26 @@ async def wait_for_pods(repo_name_slug: str, timeout: int = 300) -> Dict[str, An
     }
 
 
+async def verify_http(url: str, attempts: int = 15, delay: float = 2.0) -> tuple[bool, str]:
+    """
+    Sends real HTTP requests to the deployed app through the tunnel.
+    Any response below 500 proves the app is serving; connection errors and
+    5xx responses are retried, then reported as a failure.
+    """
+    last = "no response"
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        for _ in range(attempts):
+            try:
+                resp = await client.get(url)
+                if resp.status_code < 500:
+                    return True, f"HTTP {resp.status_code}"
+                last = f"HTTP {resp.status_code}"
+            except Exception as e:
+                last = f"{type(e).__name__}: {e}"
+            await asyncio.sleep(delay)
+    return False, last
+
+
 def _find_free_port() -> int:
     """Finds a free local TCP port by binding to port 0 and releasing it."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -994,7 +1014,8 @@ async def deploy_to_minikube(task_id: str, repo_name: str, ghcr_image: str, toke
                     pod_hint = "\nNote: Container crashed on startup (CrashLoopBackOff). Retain python:3.11-slim and existing WSGI module. Ensure all required packages (such as gunicorn, django) are installed via requirements.txt or pip in Dockerfile."
 
                     diagnosis_json = await ai_service.analyze_build_failure(
-                        crash_logs, f"https://github.com/{owner}/{repo}", file_contexts, context_hint=pod_hint
+                        crash_logs, f"https://github.com/{owner}/{repo}",
+                        file_contexts=file_contexts, context_hint=pod_hint
                     )
                     if diagnosis_json:
                         import json as _json
@@ -1030,6 +1051,11 @@ async def deploy_to_minikube(task_id: str, repo_name: str, ghcr_image: str, toke
         if not app_url:
             raise Exception("Failed to retrieve service NodePort URL from Minikube")
             
+        http_ok, http_detail = await verify_http(app_url)
+        if not http_ok:
+            raise Exception(f"Pod is Running but the application did not answer HTTP requests ({http_detail}).")
+        logger.info(f"HTTP check passed for {app_url}: {http_detail}")
+
         # 5. Store deployment metadata and mark application live
         logger.info("Storing Minikube deployment metadata...")
         task_manager.update_task(
