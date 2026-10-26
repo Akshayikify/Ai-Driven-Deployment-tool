@@ -166,9 +166,14 @@ class AnalysisEngine:
         entry_signals = ["app.py", "main.py", "server.js", "index.js", "main.go", "sentiment_api.py", "main.rs"]
         
         roots = set()
-        for signal in core_manifests + entry_signals:
-            if signal in file_index["by_name"]:
-                for rel_path in file_index["by_name"][signal]:
+        for signals in (core_manifests, entry_signals):
+            # Entry-point files (index.js, main.py, ...) only define a service root
+            # when no manifest was found; otherwise src/index.js or tests/main.py
+            # inside a normal app would be mistaken for separate services.
+            if signals is entry_signals and roots:
+                break
+            for signal in signals:
+                for rel_path in file_index["by_name"].get(signal, []):
                     root = os.path.dirname(rel_path)
                     # For root level, use empty string
                     if root == "." or root == "":
@@ -307,7 +312,7 @@ class AnalysisEngine:
                     elif "react" in deps: findings["framework"] = "React"
                     elif "vue" in deps: findings["framework"] = "Vue"
                     elif "express" in deps: findings["framework"] = "Express"
-                    elif "nest" in deps: findings["framework"] = "NestJS"
+                    elif "@nestjs/core" in deps or "nest" in deps: findings["framework"] = "NestJS"
                     elif "@fastify/core" in deps or "fastify" in deps: findings["framework"] = "Fastify"
                     else: findings["framework"] = "Node.js (Generic)"
                     
@@ -473,6 +478,8 @@ class AnalysisEngine:
         composer_json = "composer.json"
         rel_composer = f"{service_path}/{composer_json}" if service_path else composer_json
         
+        if findings["language"] != "Unknown" and rel_composer not in file_index["all_files"]:
+            return  # a manifest-based language already won; stray .php files must not override it
         has_php_files = any(f.endswith(".php") and (not service_path or f.startswith(service_path)) for f in file_index["all_files"])
         
         if rel_composer in file_index["all_files"] or has_php_files:
@@ -494,6 +501,8 @@ class AnalysisEngine:
     def _detect_ruby(self, findings: dict, workspace_path: str, file_index: dict, service_path: str):
         gemfile = "Gemfile"
         rel_gemfile = f"{service_path}/{gemfile}" if service_path else gemfile
+        if findings["language"] != "Unknown" and rel_gemfile not in file_index["all_files"]:
+            return  # stray .rb files must not override a manifest-based language
         has_ruby_files = any(f.endswith(".rb") and (not service_path or f.startswith(service_path)) for f in file_index["all_files"])
 
         if rel_gemfile in file_index["all_files"] or has_ruby_files:
@@ -511,6 +520,8 @@ class AnalysisEngine:
     def _detect_swift(self, findings: dict, workspace_path: str, file_index: dict, service_path: str):
         pkg_swift = "Package.swift"
         rel_pkg_swift = f"{service_path}/{pkg_swift}" if service_path else pkg_swift
+        if findings["language"] != "Unknown" and rel_pkg_swift not in file_index["all_files"]:
+            return  # stray .swift files must not override a manifest-based language
         has_swift_files = any(f.endswith(".swift") and (not service_path or f.startswith(service_path)) for f in file_index["all_files"])
 
         if rel_pkg_swift in file_index["all_files"] or has_swift_files:

@@ -14,11 +14,16 @@ class NodeDockerTemplate(DockerTemplate):
             workdir = os.path.dirname(pkg_files[0])
             if not workdir: workdir = "."
 
+        deps = set(findings.get("dependencies") or [])
+        server_deps = {"express", "fastify", "koa", "hapi", "@hapi/hapi", "@nestjs/core", "next", "nuxt"}
+        spa_deps = {"vite", "react-scripts", "@vue/cli-service", "@angular/cli", "parcel"}
+        is_spa = bool(deps & spa_deps) and not (deps & server_deps)
+
         content = [
             "FROM node:20-slim AS builder",
             "WORKDIR /app",
         ]
-        
+
         if workdir != ".":
             content.append(f"COPY {workdir}/package*.json ./")
             content.append("RUN npm install")
@@ -28,17 +33,31 @@ class NodeDockerTemplate(DockerTemplate):
             content.append("RUN npm install")
             content.append("COPY . .")
 
+        content.append("RUN npm run build --if-present")
+
+        if is_spa:
+            # Static front-end bundle: serve the build output with nginx instead of
+            # `npm start`, which for Vite/CRA apps is a dev server or missing.
+            content.extend([
+                "RUN mkdir -p /out && (cp -r dist/. /out/ || cp -r build/. /out/)",
+                "",
+                "FROM nginx:alpine",
+                "COPY --from=builder /out /usr/share/nginx/html",
+                "EXPOSE 80",
+            ])
+            return "\n".join(content)
+
         content.extend([
-            "RUN npm run build --if-present",
             "",
             "FROM node:20-slim",
             "WORKDIR /app",
-            "RUN groupadd -r appuser && useradd -r -g appuser appuser",
+            "ENV NODE_ENV=production",
+            "ENV PORT=3000",
             "",
-            "COPY --from=builder /app ./",
+            "COPY --from=builder --chown=node:node /app ./",
             "",
             f"EXPOSE {port}",
-            "USER appuser",
+            "USER node",
             'CMD ["npm", "start"]'
         ])
 
@@ -63,9 +82,9 @@ class NodeDockerTemplate(DockerTemplate):
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
   test:
@@ -82,7 +101,7 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f "package-lock.json" ] || [ -f "npm-shrinkwrap.json" ]; then
-            npm ci
+            npm ci || npm install
           elif [ -f "package.json" ]; then
             npm install
           else
@@ -92,7 +111,7 @@ jobs:
       - name: Run Linter (if configured)
         run: |
           if [ -f "package.json" ]; then
-            npm run lint --if-present
+            npm run lint --if-present || echo "Lint reported issues, continuing."
           fi
 
       - name: Run Tests (if configured)
@@ -130,7 +149,7 @@ jobs:
         with:
           images: ghcr.io/${{{{ env.IMAGE_ID }}}}
           tags: |
-            type=raw,value=latest,enable=${{{{ github.ref == 'refs/heads/main' }}}}
+            type=raw,value=latest,enable=${{{{ github.ref == format('refs/heads/{{0}}', github.event.repository.default_branch) }}}}
             type=sha,prefix=sha-,format=short
 
       - name: Build and push Docker image

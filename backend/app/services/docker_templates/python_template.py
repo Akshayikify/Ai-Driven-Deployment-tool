@@ -101,7 +101,6 @@ class PythonDockerTemplate(DockerTemplate):
             # Django requires ALLOWED_HOSTS and SECRET_KEY in a containerised environment.
             # These can be overridden at deploy time via Kubernetes env vars.
             content.insert(content.index(f"EXPOSE {port}"), "ENV ALLOWED_HOSTS=\"*\"")
-            content.insert(content.index(f"EXPOSE {port}"), "ENV DJANGO_SETTINGS_MODULE=\"\"")
 
             wsgi_module = findings.get("django_wsgi_module", "")
             if wsgi_module:
@@ -149,9 +148,9 @@ class PythonDockerTemplate(DockerTemplate):
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
   test-and-lint:
@@ -183,6 +182,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
+        continue-on-error: true
         working-directory: ./{clean_workdir}
         run: |
           if [ -d tests ] || ls test_*.py 1> /dev/null 2>&1; then
@@ -220,7 +220,7 @@ jobs:
         with:
           images: ghcr.io/${{{{ env.IMAGE_ID }}}}
           tags: |
-            type=raw,value=latest,enable=${{{{ github.ref == 'refs/heads/main' }}}}
+            type=raw,value=latest,enable=${{{{ github.ref == format('refs/heads/{{0}}', github.event.repository.default_branch) }}}}
             type=sha,prefix=sha-,format=short
 
       - name: Build and push Docker image

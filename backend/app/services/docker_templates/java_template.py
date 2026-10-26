@@ -10,6 +10,22 @@ class JavaDockerTemplate(DockerTemplate):
         has_mvnw = "mvnw" in file_names
         has_mvn_dir = ".mvn" in file_names or any(".mvn/" in f for f in findings.get("file_index", {}).get("all_files", []))
 
+        if "build.gradle" in findings.get("detected_files", []) and "pom.xml" not in findings.get("detected_files", []):
+            return "\n".join([
+                "FROM gradle:8-jdk17 AS builder",
+                "WORKDIR /app",
+                "COPY . .",
+                "RUN gradle build -x test --no-daemon",
+                "RUN sh -c 'ls build/libs/*.jar | grep -v plain | head -n 1 | xargs -I{} cp {} /app/app.jar'",
+                "",
+                "FROM eclipse-temurin:17-jre-alpine",
+                "WORKDIR /app",
+                "COPY --from=builder /app/app.jar app.jar",
+                "EXPOSE 8080",
+                'ENTRYPOINT ["java", "-jar", "app.jar"]',
+                "",
+            ])
+
         content = [
             "FROM maven:3-eclipse-temurin-17-alpine AS builder",
             "WORKDIR /app",
@@ -61,9 +77,9 @@ class JavaDockerTemplate(DockerTemplate):
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
   build-and-deploy:
@@ -112,7 +128,7 @@ jobs:
         with:
           images: ghcr.io/${{{{ env.IMAGE_ID }}}}
           tags: |
-            type=raw,value=latest,enable=${{{{ github.ref == 'refs/heads/main' }}}}
+            type=raw,value=latest,enable=${{{{ github.ref == format('refs/heads/{{0}}', github.event.repository.default_branch) }}}}
             type=sha,prefix=sha-,format=short
 
       - name: Build and push Docker image
