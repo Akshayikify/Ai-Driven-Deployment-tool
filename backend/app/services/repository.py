@@ -107,7 +107,15 @@ class RepositoryService:
                 clone_kwargs["allow_unsafe_options"] = True
                 logger.info(f"Configured git clone with curloptResolve={host}:443:{resolved_ip}")
 
-            repo = Repo.clone_from(clone_url, target_dir, **clone_kwargs)
+            try:
+                repo = Repo.clone_from(clone_url, target_dir, **clone_kwargs)
+            except Exception as branch_err:
+                # The requested branch may not exist (e.g. repo uses `master`);
+                # retry on the remote's default branch before giving up.
+                logger.warning(f"Clone of branch '{branch}' failed ({branch_err}); retrying on default branch...")
+                clone_kwargs.pop("branch", None)
+                self._rmtree(target_dir)
+                repo = Repo.clone_from(clone_url, target_dir, **clone_kwargs)
 
             # Persist curloptResolve in local repo config for subsequent operations
             if resolved_ip:
@@ -127,6 +135,8 @@ class RepositoryService:
     def push_changes(self, workspace_path: str, commit_message: str = "Add generated deployment files"):
         """
         Commits and pushes changes in the workspace back to the remote.
+        Returns the pushed commit SHA (the current HEAD when there was nothing
+        new to commit), or None if the push failed.
         """
         repo = None
         try:
@@ -137,7 +147,7 @@ class RepositoryService:
             # Check if there are changes to commit
             if not repo.index.diff("HEAD"):
                 logger.info("No changes to push.")
-                return True
+                return repo.head.commit.hexsha
 
             repo.index.commit(commit_message)
             origin = repo.remote(name='origin')
@@ -154,12 +164,15 @@ class RepositoryService:
                 logger.debug(f"Could not update curloptResolve before push: {res_err}")
 
             logger.info(f"Pushing changes to remote...")
-            origin.push()
+            push_results = origin.push()
+            for info in push_results:
+                if info.flags & (info.ERROR | info.REJECTED):
+                    raise RuntimeError(f"push rejected: {info.summary.strip()}")
             logger.info("Successfully pushed changes to GitHub.")
-            return True
+            return repo.head.commit.hexsha
         except Exception as e:
             logger.error(f"Failed to push changes: {e}")
-            return False
+            return None
         finally:
             if repo:
                 repo.close()

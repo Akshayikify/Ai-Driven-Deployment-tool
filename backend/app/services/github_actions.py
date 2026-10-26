@@ -7,9 +7,13 @@ class GitHubActionsService:
     def __init__(self):
         self.api_base = "https://api.github.com"
 
-    async def _get_latest_workflow_run(self, owner: str, repo: str, token: str) -> Optional[dict]:
-        """Fetches the latest workflow run for a repository."""
+    async def _get_latest_workflow_run(self, owner: str, repo: str, token: str, head_sha: Optional[str] = None) -> Optional[dict]:
+        """Fetches the latest workflow run for a repository (for one commit when head_sha is given)."""
         url = f"{self.api_base}/repos/{owner}/{repo}/actions/runs"
+        if head_sha:
+            # Only runs triggered by the commit we pushed; otherwise a stale
+            # run from an earlier commit could be mistaken for this deployment.
+            url += f"?head_sha={head_sha}"
         headers = {
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {token}",
@@ -136,6 +140,7 @@ class GitHubActionsService:
         token: str,
         task_id: Optional[str] = None,
         is_retry: bool = False,       # FIX-7: prevents infinite auto-fix → re-monitor loops
+        head_sha: Optional[str] = None,   # commit pushed by this task; scopes run discovery to it
     ):
         """
         Monitors a newly triggered GitHub Actions workflow and logs the progress natively.
@@ -164,7 +169,7 @@ class GitHubActionsService:
         run = None
         for attempt in range(12):          # 12 × 5 s = 60 s max
             await asyncio.sleep(5)
-            run = await self._get_latest_workflow_run(owner, repo, token)
+            run = await self._get_latest_workflow_run(owner, repo, token, head_sha)
             if run:
                 break
             logger.info(
@@ -194,7 +199,7 @@ class GitHubActionsService:
         seen_steps = set()
         
         while True:
-            run_status = await self._get_latest_workflow_run(owner, repo, token)
+            run_status = await self._get_latest_workflow_run(owner, repo, token, head_sha)
             if not run_status or run_status["id"] != run_id: 
                 break
 

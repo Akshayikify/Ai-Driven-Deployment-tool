@@ -50,3 +50,6 @@ scratch/
 # Local credentials and generated deployment exports
 frontend/.env
 backend/research_export/
+
+# Local process ids
+*.pid
