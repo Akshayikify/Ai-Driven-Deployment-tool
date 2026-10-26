@@ -1,0 +1,20 @@
+{
+  "app": "rust-std",
+  "repo": "theakashainapur/tb-rust-std",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "Rust",
+  "commit": "c90c52e",
+  "deployment_url": "http://127.0.0.1:51466",
+  "pod_name": "tb-rust-std-7498b48c9-gvcxg",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "c90c52e",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 1597
+}

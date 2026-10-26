@@ -1,0 +1,20 @@
+{
+  "app": "ruby-sinatra",
+  "repo": "theakashainapur/tb-ruby-sinatra",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "Ruby",
+  "commit": "e849b87",
+  "deployment_url": "http://127.0.0.1:51461",
+  "pod_name": "tb-ruby-sinatra-b49fb988b-6xdcc",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "e849b87",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 1597
+}

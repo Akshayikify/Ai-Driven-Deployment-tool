@@ -1,0 +1,20 @@
+{
+  "app": "node-port-env",
+  "repo": "theakashainapur/tb-node-port-env",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "JavaScript/TypeScript",
+  "commit": "99d0523",
+  "deployment_url": "http://127.0.0.1:63170",
+  "pod_name": "tb-node-port-env-5b47449978-tbcpx",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "99d0523",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 227
+}

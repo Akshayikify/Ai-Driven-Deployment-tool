@@ -32,6 +32,7 @@ for k in ("GROQ_API_KEY", "OPENROUTER_API_KEY", "GOOGLE_API_KEY"):
 
 GH = r"C:\Program Files\GitHub CLI\gh.exe" if os.name == "nt" else "gh"
 TERMINAL = {"success", "failed"}
+CREATE_LOCK = asyncio.Lock()
 
 
 def sh(cmd, cwd=None, check=True, timeout=180):
@@ -52,7 +53,18 @@ def ensure_repo(owner, name, visibility, token):
     full = f"{owner}/{name}"
     exists = sh([GH, "repo", "view", full], check=False).returncode == 0
     if not exists:
-        sh([GH, "repo", "create", full, f"--{visibility}", "--description", "Deployment testbed sample app"])
+        # New accounts hit "too many repositories" when creating several at once:
+        # back off and retry instead of failing the app.
+        for attempt in range(8):
+            r = sh([GH, "repo", "create", full, f"--{visibility}", "--description", "Deployment testbed sample app"], check=False)
+            if r.returncode == 0:
+                break
+            if "too many repositories" not in r.stderr:
+                raise RuntimeError(f"gh repo create failed: {r.stderr.strip()[:300]}")
+            time.sleep(90)
+        else:
+            raise RuntimeError("gh repo create kept hitting the repository creation rate limit")
+        time.sleep(20)
     remote = f"https://x-access-token:{token}@github.com/{full}.git"
     tmp = tempfile.mkdtemp(prefix="tb_seed_")
     try:
@@ -79,7 +91,8 @@ async def run_app(app, owner, visibility, token, timeout, results):
     rec = {"app": app, "repo": f"{owner}/{name}", "started": time.time()}
     results[app] = rec
     try:
-        await asyncio.to_thread(ensure_repo, owner, name, visibility, token)
+        async with CREATE_LOCK:
+            await asyncio.to_thread(ensure_repo, owner, name, visibility, token)
         url = f"https://github.com/{owner}/{name}"
         task_id = f"e2e-{app}"
         task_manager.update_task(task_id, "initialized", repo_url=url, user_id="e2e")

@@ -1,0 +1,20 @@
+{
+  "app": "python-flask",
+  "repo": "theakashainapur/tb-python-flask",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "Python",
+  "commit": "b813dea",
+  "deployment_url": "http://127.0.0.1:63401",
+  "pod_name": "tb-python-flask-796648c674-grq4v",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "b813dea",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 721
+}

@@ -72,7 +72,15 @@ class JavaDockerTemplate(DockerTemplate):
         """
         workdir = findings.get("path", ".")
         clean_workdir = workdir.strip("./")
-        
+        is_gradle = "build.gradle" in findings.get("detected_files", []) and "pom.xml" not in findings.get("detected_files", [])
+        cache_tool = "gradle" if is_gradle else "maven"
+        build_name = "Build with Gradle" if is_gradle else "Build with Maven"
+        build_cmd = (
+            'if [ -f "gradlew" ]; then chmod +x gradlew && ./gradlew build -x test --no-daemon; else gradle build -x test --no-daemon; fi'
+            if is_gradle else
+            "if [ -f mvnw ]; then chmod +x mvnw && (./mvnw -B package --file pom.xml -DskipTests || mvn -B package --file pom.xml -DskipTests); else mvn -B package --file pom.xml -DskipTests; fi"
+        )
+
         return f"""name: Java Spring Boot CI/CD
 
 on:
@@ -100,17 +108,12 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: maven
+          cache: {cache_tool}
 
-      - name: Build with Maven
+      - name: {build_name}
         working-directory: ./{clean_workdir}
         run: |
-          if [ -f "mvnw" ]; then
-            chmod +x mvnw
-            ./mvnw -B package --file pom.xml -DskipTests || mvn -B package --file pom.xml -DskipTests
-          else
-            mvn -B package --file pom.xml -DskipTests
-          fi
+          {build_cmd}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
