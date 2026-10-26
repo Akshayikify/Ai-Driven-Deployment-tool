@@ -29,7 +29,7 @@ class GitHubActionsService:
                 if runs:
                     return runs[0]  # Get the most recent run
             except Exception as e:
-                logger.error(f"Failed to fetch workflow runs for {owner}/{repo}: {e}")
+                logger.error(f"Failed to fetch workflow runs for {owner}/{repo}: {type(e).__name__}: {e}")
         return None
 
     async def _get_job_steps(self, jobs_url: str, token: str) -> list:
@@ -198,10 +198,27 @@ class GitHubActionsService:
         # Track seen steps to avoid duplicate logging
         seen_steps = set()
         
+        misses = 0
         while True:
             run_status = await self._get_latest_workflow_run(owner, repo, token, head_sha)
-            if not run_status or run_status["id"] != run_id: 
-                break
+            if not run_status:
+                # A timed-out or failed poll is transient; give up only after
+                # several in a row, and say so instead of leaving the task hanging.
+                misses += 1
+                if misses >= 6:
+                    logger.error("[Monitor] Lost contact with the GitHub API while waiting for the run.")
+                    if task_id:
+                        task_manager.update_task(task_id, "failed", message="Lost contact with GitHub while waiting for the pipeline to finish.")
+                    return
+                await asyncio.sleep(5)
+                continue
+            misses = 0
+            if run_status["id"] != run_id:
+                # A newer run appeared (e.g. a re-run); follow it.
+                run = run_status
+                run_id = run["id"]
+                jobs_url = run["jobs_url"]
+                seen_steps.clear()
 
             status = run_status.get("status")
             conclusion = run_status.get("conclusion")

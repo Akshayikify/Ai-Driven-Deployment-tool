@@ -44,6 +44,19 @@ class RepositoryService:
             return "20.207.73.82"
         return None
 
+    def _dns_override(self, host: str) -> Optional[str]:
+        """
+        Returns an IP to pin via curloptResolve only when the system resolver
+        cannot resolve the host. On a healthy network no override is needed, and
+        forcing one breaks git builds whose curl backend rejects the option.
+        """
+        import socket
+        try:
+            socket.gethostbyname(host)
+            return None
+        except Exception:
+            return self._resolve_host(host)
+
     def _rmtree(self, path: str, retries: int = 5):
         """
         Internal helper to handle read-only files on Windows during deletion.
@@ -99,7 +112,7 @@ class RepositoryService:
             # Extract host for DNS fallback resolution
             parsed = urlparse(repo_url)
             host = parsed.hostname or "github.com"
-            resolved_ip = self._resolve_host(host)
+            resolved_ip = self._dns_override(host)
 
             clone_kwargs = {"branch": branch}
             if resolved_ip:
@@ -156,7 +169,7 @@ class RepositoryService:
             try:
                 origin_url = origin.url
                 host = urlparse(origin_url).hostname or "github.com"
-                resolved_ip = self._resolve_host(host)
+                resolved_ip = self._dns_override(host)
                 if resolved_ip:
                     with repo.config_writer() as cw:
                         cw.set_value("http", "curloptResolve", f"{host}:443:{resolved_ip}")
