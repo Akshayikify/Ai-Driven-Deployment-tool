@@ -1,0 +1,6 @@
+{
+  "language": "Python",
+  "framework": "FastAPI",
+  "services": 1,
+  "path": "/"
+}

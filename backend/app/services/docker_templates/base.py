@@ -29,9 +29,9 @@ class DockerTemplate(ABC):
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
   build-and-push:
@@ -62,7 +62,7 @@ jobs:
         with:
           images: ghcr.io/${{{{ env.IMAGE_ID }}}}
           tags: |
-            type=raw,value=latest,enable=${{{{ github.ref == 'refs/heads/main' }}}}
+            type=raw,value=latest,enable=${{{{ github.ref == format('refs/heads/{{0}}', github.event.repository.default_branch) }}}}
             type=sha,prefix=sha-,format=short
 
       - name: Build and push Docker image

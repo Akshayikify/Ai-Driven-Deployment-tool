@@ -50,7 +50,13 @@ class RubyDockerTemplate(DockerTemplate):
             "",
         ])
 
-        if entry_point:
+        if "config.ru" in (findings.get("entry_point") or ""):
+            content.extend([
+                "ENV PORT=4567",
+                "EXPOSE 4567",
+                'CMD ["bundle", "exec", "rackup", "--host", "0.0.0.0", "--port", "4567"]',
+            ])
+        elif entry_point:
             content.append(f'CMD ["ruby", "{entry_point}"]')
         else:
             content.append('CMD ["irb"]')

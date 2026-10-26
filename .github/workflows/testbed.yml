@@ -1,0 +1,99 @@
+name: Deployment testbed
+
+on:
+  workflow_dispatch:
+    inputs:
+      set_port_env:
+        description: "Pass PORT=<EXPOSE> to the container (what the deployer will do after the fixes)"
+        default: "0"
+  push:
+    paths:
+      - "backend/app/services/**"
+      - "testbed/**"
+      - ".github/workflows/testbed.yml"
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.list.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: echo "apps=$(ls testbed/apps | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+
+  case:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.discover.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install analyzer dependencies
+        run: pip install loguru pydantic pydantic-settings gitpython pyyaml httpx openai groq google-generativeai motor python-jose
+      - name: Analyse and generate deployment files
+        run: python testbed/run_case.py testbed/apps/${{ matrix.app }} "$RUNNER_TEMP/ws" "$RUNNER_TEMP/result.json"
+      - name: Build, run and probe
+        run: |
+          python - <<'EOF' > "$RUNNER_TEMP/probe.env"
+          import json, os
+          r = json.load(open(os.environ["RUNNER_TEMP"] + "/result.json"))
+          print("EXPOSE=%s" % (r.get("expose") or ""))
+          print("PROBE_PATH=%s" % r.get("path", "/"))
+          EOF
+          . "$RUNNER_TEMP/probe.env"
+          build=false; run=false; http=false
+          if docker build -t case "$RUNNER_TEMP/ws"; then
+            build=true
+            if [ -n "$EXPOSE" ]; then
+              PORT_ARG=""
+              [ "${{ inputs.set_port_env }}" = "1" ] && PORT_ARG="-e PORT=$EXPOSE"
+              docker run -d --name app $PORT_ARG -p 18080:$EXPOSE case && sleep 3
+              if [ "$(docker inspect -f '{{.State.Running}}' app)" = "true" ]; then run=true; fi
+              for i in $(seq 1 20); do
+                code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080$PROBE_PATH" || true)
+                if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then http=true; break; fi
+                sleep 2
+              done
+              docker logs app 2>&1 | tail -20 || true
+            fi
+          fi
+          python - "$build" "$run" "$http" <<'EOF'
+          import json, os, sys
+          p = os.environ["RUNNER_TEMP"] + "/result.json"
+          r = json.load(open(p))
+          r["build_ok"], r["run_ok"], r["http_ok"] = [a == "true" for a in sys.argv[1:4]]
+          json.dump(r, open(p, "w"), indent=2)
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: result-${{ matrix.app }}
+          path: ${{ runner.temp }}/result.json
+
+  summary:
+    needs: case
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: results
+      - name: Ladder table
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import glob, json
+          rows = [json.load(open(p)) for p in sorted(glob.glob("results/*/result.json"))]
+          mark = lambda v: "✅" if v else "❌"
+          print("| app | detect | dockerfile | build | runs | HTTP |")
+          print("|---|---|---|---|---|---|")
+          for r in rows:
+              print("| %s | %s | %s | %s | %s | %s |" % (r["app"], mark(r["detect_ok"]), mark(r["checks"]["dockerfile"]), mark(r.get("build_ok")), mark(r.get("run_ok")), mark(r.get("http_ok"))))
+          n = len(rows)
+          print("\n**HTTP-verified: %d / %d**" % (sum(1 for r in rows if r.get("http_ok")), n))
+          EOF

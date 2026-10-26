@@ -1,0 +1,20 @@
+{
+  "app": "php-plain",
+  "repo": "theakashainapur/tb-php-plain",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "PHP",
+  "commit": "17cb31b",
+  "deployment_url": "http://127.0.0.1:49813",
+  "pod_name": "tb-php-plain-5d5cf5ff8-w8cfd",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "17cb31b",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 479
+}

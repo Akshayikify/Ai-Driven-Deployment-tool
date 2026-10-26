@@ -1,0 +1,20 @@
+{
+  "app": "go-http",
+  "repo": "theakashainapur/tb-go-http",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "Go",
+  "commit": "b744856",
+  "deployment_url": "http://127.0.0.1:52426",
+  "pod_name": "tb-go-http-5dfbdfbbb-k4d94",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "b744856",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 580
+}

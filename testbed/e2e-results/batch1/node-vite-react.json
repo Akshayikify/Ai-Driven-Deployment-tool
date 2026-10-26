@@ -1,0 +1,20 @@
+{
+  "app": "node-vite-react",
+  "repo": "theakashainapur/tb-node-vite-react",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "JavaScript/TypeScript",
+  "commit": "a0a09f6",
+  "deployment_url": "http://127.0.0.1:59203",
+  "pod_name": "tb-node-vite-react-8b9df79cf-8zc64",
+  "http_status": 200,
+  "http_body": "<!doctype html>\n<html><script type=\"module\" crossorigin src=\"/assets/index-DqUJ3",
+  "ci_runs": [
+    {
+      "sha": "a0a09f6",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 525
+}

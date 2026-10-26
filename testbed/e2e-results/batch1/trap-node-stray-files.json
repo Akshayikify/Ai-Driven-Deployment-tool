@@ -1,0 +1,20 @@
+{
+  "app": "trap-node-stray-files",
+  "repo": "theakashainapur/tb-trap-node-stray-files",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "JavaScript/TypeScript",
+  "commit": "e5a4d25",
+  "deployment_url": "http://127.0.0.1:53431",
+  "pod_name": "tb-trap-node-stray-files-6c4779666d-6fpdr",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "e5a4d25",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 525
+}

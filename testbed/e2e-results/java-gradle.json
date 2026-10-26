@@ -1,0 +1,25 @@
+{
+  "app": "java-gradle",
+  "repo": "theakashainapur/tb-java-gradle",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "Java",
+  "commit": "df558d5",
+  "deployment_url": "http://127.0.0.1:53439",
+  "pod_name": "tb-java-gradle-7848fd77cc-d79d8",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "df558d5",
+      "conclusion": "success",
+      "event": "push"
+    },
+    {
+      "sha": "9ed2527",
+      "conclusion": "failure",
+      "event": "push"
+    }
+  ],
+  "seconds": 656
+}

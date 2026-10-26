@@ -7,6 +7,7 @@ from app.services.generator import file_generator
 from app.services.security_scanner import security_scanner
 from app.core.config import settings
 from loguru import logger
+import os
 import uuid
 import asyncio
 import httpx
@@ -99,8 +100,8 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
                     "Please check the repository URL and try again."
                 )
                 is_likely_user_error = True
-            elif not github_token:
-                # No token + clone failed → likely private repo
+            elif not github_token and not user_id:
+                # Anonymous request + clone failed → likely private repo
                 clone_error_msg = (
                     "Cloning failed: the repository may be private or the URL is incorrect. "
                     "Connect your GitHub account to deploy private repositories."
@@ -207,12 +208,15 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
 
         # 4. Push changes if token provided
         t_push = 0
+        pushed_sha = None
         if github_token:
             task_manager.update_task(task_id, "pushing")
             logger.info(f"Task {task_id}: Attempting to push changes...")
             t0_push = time.time()
-            repo_service.push_changes(workspace)
+            pushed_sha = repo_service.push_changes(workspace)
             t_push = time.time() - t0_push
+            if not pushed_sha:
+                raise RuntimeError("Could not push the generated deployment files to GitHub.")
 
         # 5. Cleanup
         repo_service.cleanup_workspace(workspace)
@@ -235,7 +239,7 @@ async def analyze_repo_task(task_id: str, repo_url: str, branch: str, user_id: O
             # We spawn this as a background asyncio task so it doesn't block the HTTP response or Task Manager
             import asyncio
             from app.services.github_actions import github_actions_service
-            asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id))
+            asyncio.create_task(github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id, head_sha=pushed_sha))
         else:    
             update_kwargs = {
                 "status": "ready_to_deploy",
@@ -288,12 +292,15 @@ async def _resume_push(task_id: str):
 
     try:
         t_push = 0
+        pushed_sha = None
         if github_token:
             task_manager.update_task(task_id, "pushing")
             logger.info(f"Task {task_id}: User confirmed push — pushing changes to GitHub...")
             t0_push = time.time()
-            repo_service.push_changes(workspace)
+            pushed_sha = repo_service.push_changes(workspace)
             t_push = time.time() - t0_push
+            if not pushed_sha:
+                raise RuntimeError("Could not push the generated deployment files to GitHub.")
 
         repo_service.cleanup_workspace(workspace)
 
@@ -301,7 +308,7 @@ async def _resume_push(task_id: str):
             import asyncio
             from app.services.github_actions import github_actions_service
             asyncio.create_task(
-                github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id)
+                github_actions_service.monitor_workflow(repo_url, github_token, task_id=task_id, head_sha=pushed_sha)
             )
         else:
             update_kwargs = {

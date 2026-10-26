@@ -1,0 +1,20 @@
+{
+  "app": "python-django",
+  "repo": "theakashainapur/tb-python-django",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "Python",
+  "commit": "d509652",
+  "deployment_url": "http://127.0.0.1:58252",
+  "pod_name": "tb-python-django-84cfc45cb7-zgkxw",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "d509652",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 1408
+}

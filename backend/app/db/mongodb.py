@@ -147,7 +147,9 @@ class MongoDB:
         
         try:
             import re
-            data = deployment_data.copy()
+            # Underscore-prefixed keys are in-memory only (GitHub token, workspace path);
+            # never write them to the database.
+            data = {k: v for k, v in deployment_data.items() if not str(k).startswith("_")}
             # Clean up non-serializable objects (like datetime)
             if "start_time" in data and isinstance(data["start_time"], datetime.datetime):
                 data["start_time"] = data["start_time"].isoformat()

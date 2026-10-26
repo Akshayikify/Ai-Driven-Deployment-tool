@@ -1,0 +1,20 @@
+{
+  "app": "java-maven",
+  "repo": "theakashainapur/tb-java-maven",
+  "status": "success",
+  "message": "Application Live!",
+  "language": "Java",
+  "commit": "866da5c",
+  "deployment_url": "http://127.0.0.1:65037",
+  "pod_name": "tb-java-maven-7989898fff-gnt6t",
+  "http_status": 200,
+  "http_body": "ok",
+  "ci_runs": [
+    {
+      "sha": "866da5c",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "seconds": 591
+}

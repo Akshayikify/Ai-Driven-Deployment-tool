@@ -10,28 +10,13 @@ class RustDockerTemplate(DockerTemplate):
         """
         name = findings.get("name", "app")
         
-        return f"""# Stage 1: Planning
-FROM lukemathwalker/cargo-chef:latest-rust-1.75-bookworm AS planner
+        return f"""# Builder
+FROM rust:1-bookworm AS builder
 WORKDIR /app
 COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-# Stage 2: Caching
-FROM lukemathwalker/cargo-chef:latest-rust-1.75-bookworm AS cacher
-WORKDIR /app
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
-
-# Stage 3: Builder
-FROM rust:1.75-bookworm AS builder
-WORKDIR /app
-COPY . .
-# Copy dependencies from cacher
-COPY --from=cacher /app/target target
-COPY --from=cacher /usr/local/cargo /usr/local/cargo
 RUN cargo build --release
 
-# Stage 4: Runtime
+# Runtime
 FROM debian:bookworm-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -43,6 +28,8 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 ENV APP_NAME={name}
+ENV PORT=8080
+EXPOSE 8080
 CMD ["./{name}"]
 """
 
@@ -65,9 +52,9 @@ Dockerfile
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
 
 jobs:
   test:
@@ -125,7 +112,7 @@ jobs:
         with:
           images: ghcr.io/${{{{ env.IMAGE_ID }}}}
           tags: |
-            type=raw,value=latest,enable=${{{{ github.ref == 'refs/heads/main' }}}}
+            type=raw,value=latest,enable=${{{{ github.ref == format('refs/heads/{{0}}', github.event.repository.default_branch) }}}}
             type=sha,prefix=sha-,format=short
 
       - name: Build and push Docker image
