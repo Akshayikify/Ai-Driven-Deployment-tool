@@ -47,8 +47,21 @@ backend/app/temp/*
 !backend/app/temp/.gitkeep
 scratch/
 
-# Local credentials and generated deployment exports
+# ============================================================
+# SECRETS — never commit any .env file or key files
+# ============================================================
+.env
+**/.env
+**/.env.*
+*.env
+# Explicitly listed for clarity
+backend/.env
 frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+frontend/.env.test
+# Local credentials and generated deployment exports
 backend/research_export/
 
 # Local process ids
