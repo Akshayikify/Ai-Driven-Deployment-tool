@@ -1,22 +1,44 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DeploymentsTable from "@/components/DeploymentsTable";
 import ProgressTimeline from "@/components/ProgressTimeline";
 import LogMonitoringCard from "@/components/LogMonitoringCard";
 import AIAgent from "@/components/AIAgent";
 import SecurityReportCard from "@/components/SecurityReportCard";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { Card } from "@/components/ui/card";
-import { Activity, Clock, Server, ShieldAlert, ShieldX, Github as GithubIcon, X } from "lucide-react";
+import {
+  Activity,
+  Clock,
+  Server,
+  ShieldAlert,
+  ShieldX,
+  Github,
+  ExternalLink,
+  AlertCircle,
+  CheckCircle,
+  Copy,
+  Check,
+  X
+} from "lucide-react";
 
 import { useDeployment } from "@/context/DeploymentContext";
 import { useUser } from "@clerk/clerk-react";
-import { Github, ExternalLink, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function Dashboard() {
   const { steps, estimatedDuration, securityReport, awaitingPushConfirmation, confirmPush, cancelPush, deploymentUrl } = useDeployment();
   const { user, isLoaded } = useUser();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    if (!deploymentUrl) return;
+    navigator.clipboard.writeText(deploymentUrl);
+    setCopied(true);
+    toast.success("Application link copied to clipboard!");
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   const hasGitHub = user?.externalAccounts?.some(account => account.provider === 'github');
 
@@ -197,26 +219,61 @@ export default function Dashboard() {
         </Card>
 
         {deploymentUrl && (
-          <div className="mb-6 p-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+          <div className="mb-6 p-6 bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/30 dark:via-emerald-950/20 dark:to-teal-950/20 border border-green-200 dark:border-green-800/60 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg shadow-green-500/5 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-green-100 dark:bg-green-900/50 flex items-center justify-center flex-shrink-0 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 shadow-sm">
+                <CheckCircle className="w-6 h-6" />
               </div>
-              <div>
-                <h3 className="text-sm font-extrabold text-green-800 dark:text-green-400 uppercase tracking-tight">Deployment Successful!</h3>
-                <p className="text-xs text-green-700/80 dark:text-green-400/70 mt-0.5 font-medium">Your application is live and running on the local Minikube cluster.</p>
-                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1 select-all">{deploymentUrl}</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-extrabold text-green-800 dark:text-green-300 uppercase tracking-tight">
+                    Application Deployed Successfully!
+                  </h3>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-200/70 text-green-800 dark:bg-green-900/70 dark:text-green-300 border border-green-300 dark:border-green-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" />
+                    Session Active
+                  </span>
+                </div>
+                <p className="text-xs text-green-700/80 dark:text-green-400/80 font-medium">
+                  Your application is live and running on the local Minikube cluster. This link remains accessible throughout your session.
+                </p>
+                <div className="flex items-center gap-2 pt-1.5 flex-wrap">
+                  <code className="text-xs font-mono font-semibold bg-white/90 dark:bg-slate-900/90 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-lg border border-green-200 dark:border-green-800 select-all shadow-xs">
+                    {deploymentUrl}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCopyLink}
+                    className="h-8 px-3 text-xs font-semibold border-green-200 dark:border-green-800 hover:bg-green-100/60 dark:hover:bg-green-900/40 text-green-700 dark:text-green-300"
+                    title="Copy deployment URL"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-1.5 text-green-600" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-1.5" />
+                        Copy Link
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
-            <a
-              href={deploymentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm shadow-green-500/10 hover:shadow-md hover:shadow-green-500/20"
-            >
-              <span>Visit Application</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            <div className="flex items-center gap-3 self-start md:self-center flex-shrink-0">
+              <a
+                href={deploymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-green-600/20 hover:shadow-lg hover:shadow-green-600/30 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span>Visit Live App</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
         )}
 
@@ -230,45 +287,47 @@ export default function Dashboard() {
         )}
 
         {/* Main Content Area */}
-        <div className="space-y-6">
-          {/* 1. AI Agent - Full Width */}
-          <AIAgent className="h-[600px] w-full" />
+        <ErrorBoundary>
+          <div className="space-y-6">
+            {/* 1. AI Agent - Full Width */}
+            <AIAgent className="h-[600px] w-full" />
 
-          {/* 2. Logs and Status - 75/25 Split */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Log Monitoring - 75% */}
-            <LogMonitoringCard className="lg:col-span-3 h-[500px]" />
+            {/* 2. Logs and Status - 75/25 Split */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Log Monitoring - 75% */}
+              <LogMonitoringCard className="lg:col-span-3 h-[500px]" />
 
-            {/* Deployment Status - 25% */}
-            <Card className="lg:col-span-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col h-[500px] shadow-sm">
-              <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Deployment Status</h3>
-                </div>
-                {estimatedDuration && (
-                  <div className="flex flex-col items-end">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Est. Time</span>
-                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{estimatedDuration}</span>
+              {/* Deployment Status - 25% */}
+              <Card className="lg:col-span-1 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-4 sm:p-6 flex flex-col h-[500px] shadow-sm">
+                <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Deployment Status</h3>
                   </div>
-                )}
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <ProgressTimeline steps={steps} />
-              </div>
-            </Card>
-          </div>
+                  {estimatedDuration && (
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Est. Time</span>
+                      <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{estimatedDuration}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <ProgressTimeline steps={steps} />
+                </div>
+              </Card>
+            </div>
 
-          {/* 2b. Security Report Card — visible whenever a scan result arrives */}
-          {securityReport && (
-            <SecurityReportCard report={securityReport} />
-          )}
+            {/* 2b. Security Report Card — visible whenever a scan result arrives */}
+            {securityReport && (
+              <SecurityReportCard report={securityReport} />
+            )}
 
-          {/* 3. Recent Deployments Table */}
-          <div className="pt-4">
-            <DeploymentsTable />
+            {/* 3. Recent Deployments Table */}
+            <div className="pt-4">
+              <DeploymentsTable />
+            </div>
           </div>
-        </div>
+        </ErrorBoundary>
       </div>
     </DashboardLayout>
   );

@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { Menu, X, ShieldCheck, ExternalLink } from "lucide-react";
+import { useDeployment } from "@/context/DeploymentContext";
 
 export default function DashboardHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { deploymentUrl } = useDeployment();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -41,10 +43,40 @@ export default function DashboardHeader() {
                 {item}
               </a>
             ))}
+
+            {deploymentUrl && (
+              <a
+                href={deploymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white text-xs font-bold rounded-full shadow-md shadow-green-500/20 transition-all hover:scale-105 active:scale-95"
+                title={`Live Application Link: ${deploymentUrl}`}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                <span>Live App</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-90" />
+              </a>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            {deploymentUrl && (
+              <a
+                href={deploymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="md:hidden inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-600 text-white text-[11px] font-bold rounded-full shadow-sm"
+                title={`Live Application Link: ${deploymentUrl}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <span>Live App</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
             <button
               onClick={toggleMobileMenu}
               className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -68,6 +100,21 @@ export default function DashboardHeader() {
                   {item}
                 </a>
               ))}
+              {deploymentUrl && (
+                <a
+                  href={deploymentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-300 font-bold text-xs"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    Open Live Application
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
             </div>
           </div>
         )}

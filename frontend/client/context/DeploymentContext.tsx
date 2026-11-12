@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { toast } from 'sonner';
 
 interface TimelineStep {
     id: string;
@@ -26,6 +27,8 @@ interface DeploymentContextType {
     resetSession: () => void;
     autoFix: any | null;
     deploymentUrl: string | null;
+    setDeploymentUrl: (url: string | null) => void;
+    openDeploymentUrl: () => void;
 }
 
 const defaultSteps: TimelineStep[] = [
@@ -43,8 +46,23 @@ const defaultSteps: TimelineStep[] = [
 const DeploymentContext = createContext<DeploymentContextType | undefined>(undefined);
 
 export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-    const [repoUrl, setRepoUrl] = useState<string | null>(null);
+    // Session-persistent state initialization
+    const [activeTaskId, setActiveTaskId] = useState<string | null>(() => {
+        try {
+            return sessionStorage.getItem("autodeploy_activeTaskId");
+        } catch {
+            return null;
+        }
+    });
+
+    const [repoUrl, setRepoUrl] = useState<string | null>(() => {
+        try {
+            return sessionStorage.getItem("autodeploy_repoUrl");
+        } catch {
+            return null;
+        }
+    });
+
     const [steps, setSteps] = useState<TimelineStep[]>(defaultSteps);
     const [currentMessage, setCurrentMessage] = useState<string>("Ready for deployment");
     const [estimatedDuration, setEstimatedDuration] = useState<string | null>(null);
@@ -52,7 +70,50 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     const [awaitingPushConfirmation, setAwaitingPushConfirmation] = useState<boolean>(false);
     const [sessionKey, setSessionKey] = useState<number>(0);
     const [autoFix, setAutoFix] = useState<any | null>(null);
-    const [deploymentUrl, setDeploymentUrl] = useState<string | null>(null);
+
+    const [deploymentUrl, setDeploymentUrl] = useState<string | null>(() => {
+        try {
+            return sessionStorage.getItem("autodeploy_deploymentUrl");
+        } catch {
+            return null;
+        }
+    });
+
+    // Reference to prevent duplicate toasts for the same deployment URL
+    const lastNotifiedUrlRef = useRef<string | null>(null);
+
+    // Sync activeTaskId to sessionStorage
+    useEffect(() => {
+        try {
+            if (activeTaskId) {
+                sessionStorage.setItem("autodeploy_activeTaskId", activeTaskId);
+            } else {
+                sessionStorage.removeItem("autodeploy_activeTaskId");
+            }
+        } catch {}
+    }, [activeTaskId]);
+
+    // Sync repoUrl to sessionStorage
+    useEffect(() => {
+        try {
+            if (repoUrl) {
+                sessionStorage.setItem("autodeploy_repoUrl", repoUrl);
+            } else {
+                sessionStorage.removeItem("autodeploy_repoUrl");
+            }
+        } catch {}
+    }, [repoUrl]);
+
+    // Sync deploymentUrl to sessionStorage
+    useEffect(() => {
+        try {
+            if (deploymentUrl) {
+                sessionStorage.setItem("autodeploy_deploymentUrl", deploymentUrl);
+            } else {
+                sessionStorage.removeItem("autodeploy_deploymentUrl");
+            }
+        } catch {}
+    }, [deploymentUrl]);
 
     const resetSession = () => {
         setActiveTaskId(null);
@@ -64,7 +125,19 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
         setAwaitingPushConfirmation(false);
         setAutoFix(null);
         setDeploymentUrl(null);
+        lastNotifiedUrlRef.current = null;
+        try {
+            sessionStorage.removeItem("autodeploy_activeTaskId");
+            sessionStorage.removeItem("autodeploy_repoUrl");
+            sessionStorage.removeItem("autodeploy_deploymentUrl");
+        } catch {}
         setSessionKey(k => k + 1); // signal all subscribers to reset
+    };
+
+    const openDeploymentUrl = () => {
+        if (deploymentUrl) {
+            window.open(deploymentUrl, "_blank", "noopener,noreferrer");
+        }
     };
 
     useEffect(() => {
@@ -97,8 +170,8 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
 
                     if (response.ok) {
                         const data = await response.json();
-                        setSteps(data.steps);
-                        setCurrentMessage(data.current_message);
+                        setSteps(data.steps || defaultSteps);
+                        setCurrentMessage(data.current_message || "");
                         if (data.estimated_duration) {
                             setEstimatedDuration(data.estimated_duration);
                         }
@@ -108,9 +181,25 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
                         if (data.auto_fix) {
                             setAutoFix(data.auto_fix);
                         }
-                        if (data.deployment_url) {
-                            setDeploymentUrl(data.deployment_url);
+                        
+                        const detectedUrl = data.deployment_url || data.application_url;
+                        if (detectedUrl) {
+                            setDeploymentUrl(detectedUrl);
+
+                            // Notify the user if this URL hasn't been notified yet
+                            if (lastNotifiedUrlRef.current !== detectedUrl) {
+                                lastNotifiedUrlRef.current = detectedUrl;
+                                toast.success("Application Successfully Deployed! 🚀", {
+                                    description: `Your application is live and accessible at ${detectedUrl}`,
+                                    action: {
+                                        label: "Visit App",
+                                        onClick: () => window.open(detectedUrl, "_blank", "noopener,noreferrer"),
+                                    },
+                                    duration: 15000,
+                                });
+                            }
                         }
+
                         // Drive the confirmation modal
                         setAwaitingPushConfirmation(
                             data.status === "awaiting_push_confirmation"
@@ -139,7 +228,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
             setSecurityReport(null);
             setAwaitingPushConfirmation(false);
             setAutoFix(null);
-            setDeploymentUrl(null);
+            // Note: We deliberately preserve deploymentUrl from sessionStorage if one exists from the session
         }
 
         return () => {
@@ -162,7 +251,25 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     };
 
     return (
-        <DeploymentContext.Provider value={{ activeTaskId, setActiveTaskId, repoUrl, setRepoUrl, steps, currentMessage, estimatedDuration, securityReport, awaitingPushConfirmation, confirmPush, cancelPush, sessionKey, resetSession, autoFix, deploymentUrl }}>
+        <DeploymentContext.Provider value={{
+            activeTaskId,
+            setActiveTaskId,
+            repoUrl,
+            setRepoUrl,
+            steps,
+            currentMessage,
+            estimatedDuration,
+            securityReport,
+            awaitingPushConfirmation,
+            confirmPush,
+            cancelPush,
+            sessionKey,
+            resetSession,
+            autoFix,
+            deploymentUrl,
+            setDeploymentUrl,
+            openDeploymentUrl
+        }}>
             {children}
         </DeploymentContext.Provider>
     );

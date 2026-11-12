@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { Menu, X, ShieldCheck, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -8,11 +8,13 @@ import {
   UserButton,
   useClerk
 } from "@clerk/clerk-react";
+import { useDeployment } from "@/context/DeploymentContext";
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { signOut } = useClerk();
   const navigate = useNavigate();
+  const { deploymentUrl } = useDeployment();
 
   const handleNavClick = (section: string) => {
     if (section === 'contact') {
@@ -66,7 +68,24 @@ export default function Header() {
           </div>
 
           {/* Right Side Buttons */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            {deploymentUrl && (
+              <a
+                href={deploymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white text-xs font-bold rounded-full shadow-md shadow-green-500/20 transition-all hover:scale-105 active:scale-95"
+                title={`Open Live Application: ${deploymentUrl}`}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                <span>Live App</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+
             <SignedIn>
               <UserButton afterSignOutUrl="/" />
             </SignedIn>
@@ -112,6 +131,21 @@ export default function Header() {
                   {item}
                 </button>
               ))}
+              {deploymentUrl && (
+                <a
+                  href={deploymentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-3 py-2.5 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-300 font-bold text-xs"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    Open Live Application
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                 <SignedIn>
                   <div className="px-2">

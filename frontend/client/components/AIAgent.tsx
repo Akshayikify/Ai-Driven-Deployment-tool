@@ -38,8 +38,27 @@ export default function AIAgent({ className }: AIAgentProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [currentTask, setCurrentTask] = useState("Ready to assist with your deployment...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastAnnouncedUrlRef = useRef<string | null>(null);
 
-  const { setActiveTaskId, setRepoUrl, resetSession } = useDeployment();
+  const { setActiveTaskId, setRepoUrl, resetSession, deploymentUrl } = useDeployment();
+
+  useEffect(() => {
+    if (deploymentUrl && deploymentUrl !== lastAnnouncedUrlRef.current) {
+      lastAnnouncedUrlRef.current = deploymentUrl;
+      setMessages((prev) => {
+        if (prev.some((m) => m.content.includes(deploymentUrl))) return prev;
+        return [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            type: "agent",
+            content: `### 🚀 Application Successfully Deployed!\n\nYour application is live and accessible on the local Minikube cluster:\n\n🔗 **[Visit Live Application](${deploymentUrl})**\n\n\`${deploymentUrl}\`\n\n*This deployment link remains pinned in your header throughout your session.*`,
+            timestamp: new Date(),
+          },
+        ];
+      });
+    }
+  }, [deploymentUrl]);
 
   const agentCapabilities = [
     { icon: Brain, label: "Code Analysis", status: "active" },
@@ -49,6 +68,7 @@ export default function AIAgent({ className }: AIAgentProps) {
 
   const handleNewChat = () => {
     // Reset all dashboard state (logs, timeline, security report, recent deployments)
+    lastAnnouncedUrlRef.current = null;
     resetSession();
     // Reset local chat messages
     setMessages([

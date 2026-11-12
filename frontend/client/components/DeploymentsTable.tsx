@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
 import { useDeployment } from "@/context/DeploymentContext";
@@ -24,6 +24,8 @@ interface Deployment {
   commit: string;
   environment: string;
   current_message?: string;
+  deployment_url?: string;
+  application_url?: string;
 }
 
 const getStatusConfig = (status: string) => {
@@ -73,7 +75,7 @@ interface DeploymentsTableProps {
 
 export default function DeploymentsTable({ className }: DeploymentsTableProps) {
   const { userId } = useAuth();
-  const { sessionKey } = useDeployment();
+  const { sessionKey, deploymentUrl, setDeploymentUrl } = useDeployment();
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
   const prevSessionKey = useRef(sessionKey);
@@ -94,6 +96,12 @@ export default function DeploymentsTable({ className }: DeploymentsTableProps) {
       if (response.ok) {
         const data = await response.json();
         setDeployments(data);
+        if (!deploymentUrl && Array.isArray(data)) {
+          const live = data.find((d: any) => d.status === "success" && (d.deployment_url || d.application_url));
+          if (live) {
+            setDeploymentUrl(live.deployment_url || live.application_url);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to fetch deployments:", error);
@@ -180,6 +188,18 @@ export default function DeploymentsTable({ className }: DeploymentsTableProps) {
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[180px] mt-0.5">
                               {deployment.current_message}
                             </span>
+                          )}
+                          {(deployment.deployment_url || deployment.application_url) && (
+                            <a
+                              href={deployment.deployment_url || deployment.application_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 dark:text-green-400 hover:text-green-700 hover:underline mt-1 w-fit"
+                              title="Open live deployed application"
+                            >
+                              <span>Live App</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
                           )}
                         </div>
                       </TableCell>
