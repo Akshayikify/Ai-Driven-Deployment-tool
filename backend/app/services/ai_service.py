@@ -4,25 +4,48 @@ from app.core.config import settings
 from .ai_providers.gemini_provider import GeminiProvider
 from .ai_providers.openrouter_provider import OpenRouterProvider
 from .ai_providers.groq_provider import GroqProvider
-from .ai_providers.base import AIProvider
+from .ai_providers.base import AIProvider, sanitize_error
 
 class AIService:
     def __init__(self):
         self.providers: List[AIProvider] = []
-        
-        # Initialize providers based on available keys
-        # We prioritize Groq for its extreme speed and stability
-        if settings.GROQ_API_KEY:
-            self.providers.append(GroqProvider(settings.GROQ_API_KEY))
-        
-        if settings.OPENROUTER_API_KEY:
-            self.providers.append(OpenRouterProvider(settings.OPENROUTER_API_KEY))
-        
-        if settings.GOOGLE_API_KEY:
-            self.providers.append(GeminiProvider(settings.GOOGLE_API_KEY))
+        self.load_providers()
 
-        if not self.providers:
-            logger.warning("No AI providers configured. Refinement will be disabled.")
+    def load_providers(self):
+        """
+        Initializes AI providers in strict priority order:
+          1. OpenRouter (Primary)
+          2. Google Gemini (Fallback)
+          3. Groq (Optional tertiary, only if explicitly enabled with a valid key and model)
+        """
+        self.providers = []
+
+        # Priority 1: OpenRouter (Primary)
+        openrouter_key = getattr(settings, "OPENROUTER_API_KEY", None)
+        if openrouter_key and openrouter_key.strip():
+            openrouter = OpenRouterProvider(openrouter_key)
+            if openrouter.is_available():
+                self.providers.append(openrouter)
+
+        # Priority 2: Google Gemini (Fallback)
+        gemini_key = getattr(settings, "GOOGLE_API_KEY", None)
+        if gemini_key and gemini_key.strip():
+            gemini = GeminiProvider(gemini_key)
+            if gemini.is_available():
+                self.providers.append(gemini)
+
+        # Priority 3: Groq (Optional tertiary - only if explicitly provided with a valid key and model)
+        groq_key = getattr(settings, "GROQ_API_KEY", None)
+        if groq_key and groq_key.strip():
+            groq = GroqProvider(groq_key)
+            if groq.is_available():
+                self.providers.append(groq)
+
+        if self.providers:
+            provider_names = [p.provider_name for p in self.providers]
+            logger.info(f"AI Service initialized. Active providers in priority order: {provider_names}")
+        else:
+            logger.warning("No active AI providers configured. AI features will run in degraded/offline mode.")
 
     async def refine_analysis(self, findings: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -31,20 +54,24 @@ class AIService:
         if not self.providers:
             return findings
 
-        for provider in self.providers:
+        for i, provider in enumerate(self.providers):
+            provider_name = provider.provider_name
             try:
-                logger.info(f"Attempting AI refinement with {provider.__class__.__name__}...")
+                logger.info(f"Attempting AI refinement with {provider_name} (priority {i + 1}/{len(self.providers)})...")
                 ai_data = await provider.refine_analysis(findings)
                 
                 if ai_data:
-                    logger.info(f"Refinement successful using {provider.__class__.__name__}")
+                    logger.info(f"Refinement successful using {provider_name}")
                     findings.update(ai_data)
                     findings["ai_refined"] = True
-                    findings["ai_provider"] = provider.__class__.__name__
+                    findings["ai_provider"] = provider_name
                     return findings
+                else:
+                    logger.warning(f"Provider {provider_name} returned empty refinement data. Attempting fallback...")
                 
             except Exception as e:
-                logger.error(f"Provider {provider.__class__.__name__} failed: {e}")
+                safe_err = sanitize_error(e)
+                logger.warning(f"Provider {provider_name} failed during refinement: {safe_err}. Attempting fallback...")
                 continue
 
         logger.warning("All AI providers failed to refine analysis.")
@@ -52,20 +79,29 @@ class AIService:
 
     async def chat_with_agent(self, message: str) -> str:
         """
-        Orchestrates generic chat queries across available providers.
+        Orchestrates generic chat queries across available providers in priority order.
+        Falls back to the next provider if the current provider fails.
         """
         if not self.providers:
+            logger.warning("Chat requested but no AI providers are available.")
             return "I'm currently running in offline mode without an API key, so I can only perform basic static analysis and generic replies."
 
-        for provider in self.providers:
+        for i, provider in enumerate(self.providers):
+            provider_name = provider.provider_name
             try:
+                logger.info(f"Attempting chat with {provider_name} (priority {i + 1}/{len(self.providers)})...")
                 response = await provider.chat(message)
-                if response:
-                    return response
+                if response and isinstance(response, str) and response.strip():
+                    logger.info(f"Chat response successfully generated using {provider_name}")
+                    return response.strip()
+                else:
+                    logger.warning(f"Provider {provider_name} returned empty response. Attempting fallback...")
             except Exception as e:
-                logger.error(f"Provider {provider.__class__.__name__} failed during chat: {e}")
+                safe_err = sanitize_error(e)
+                logger.warning(f"Provider {provider_name} encountered error during chat: {safe_err}. Attempting fallback...")
                 continue
                 
+        logger.error("All available AI providers failed to generate a chat response.")
         return "I'm sorry, I'm having trouble connecting to my AI backend right now. Please try again later."
 
     async def generate_dockerfile(self, findings: Dict[str, Any]) -> Optional[str]:
@@ -95,15 +131,19 @@ class AIService:
         Output EXACTLY AND ONLY the raw Dockerfile content. NO explanations, NO markdown code blocks, NO backticks.
         """
 
-        for provider in self.providers:
+        for i, provider in enumerate(self.providers):
+            provider_name = provider.provider_name
             try:
-                logger.info(f"Attempting Dockerfile generation with {provider.__class__.__name__}...")
+                logger.info(f"Attempting Dockerfile generation with {provider_name} (priority {i + 1}/{len(self.providers)})...")
                 response = await provider.generate_dockerfile(prompt)
                 if response:
-                    logger.info(f"Generated Dockerfile using {provider.__class__.__name__}")
+                    logger.info(f"Generated Dockerfile using {provider_name}")
                     return response
+                else:
+                    logger.warning(f"Provider {provider_name} returned empty Dockerfile. Attempting fallback...")
             except Exception as e:
-                logger.error(f"Provider {provider.__class__.__name__} failed Dockerfile gen: {e}")
+                safe_err = sanitize_error(e)
+                logger.warning(f"Provider {provider_name} failed Dockerfile gen: {safe_err}. Attempting fallback...")
                 continue
                 
         logger.warning("All AI providers failed to generate Dockerfile.")
@@ -193,9 +233,10 @@ class AIService:
         }}
         """
 
-        for provider in self.providers:
+        for i, provider in enumerate(self.providers):
+            provider_name = provider.provider_name
             try:
-                logger.info(f"Attempting log analysis with {provider.__class__.__name__}...")
+                logger.info(f"Attempting log analysis with {provider_name} (priority {i + 1}/{len(self.providers)})...")
                 response = await provider.chat(prompt) 
                 if response:
                     # Clean up markdown JSON blocks if the LLM ignored instructions
@@ -206,11 +247,16 @@ class AIService:
                         cleaned = cleaned[3:]
                     if cleaned.endswith("```"):
                         cleaned = cleaned[:-3]
+                    logger.info(f"Log analysis successful using {provider_name}")
                     return cleaned.strip()
+                else:
+                    logger.warning(f"Provider {provider_name} returned empty log analysis. Attempting fallback...")
             except Exception as e:
-                logger.error(f"Provider {provider.__class__.__name__} failed log analysis: {e}")
+                safe_err = sanitize_error(e)
+                logger.warning(f"Provider {provider_name} failed log analysis: {safe_err}. Attempting fallback...")
                 continue
                 
+        logger.error("All AI providers failed to analyze build failure.")
         return None
 
 ai_service = AIService()

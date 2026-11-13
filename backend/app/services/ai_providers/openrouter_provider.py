@@ -1,27 +1,48 @@
 from openai import AsyncOpenAI
 from loguru import logger
 from app.core.config import settings
-from .base import AIProvider
+from .base import AIProvider, sanitize_error
 from typing import Dict, Any, Optional
 
+def is_valid_openrouter_key(key: Optional[str]) -> bool:
+    """Validates whether an OpenRouter API key is provided and structurally valid."""
+    if not key or not isinstance(key, str):
+        return False
+    k = key.strip()
+    if not k or k.lower() in ("none", "null", "undefined", "false", "your-openrouter-key", "placeholder"):
+        return False
+    if len(k) < 10:
+        return False
+    return True
+
 class OpenRouterProvider(AIProvider):
-    def __init__(self, api_key: str):
-        self.api_key = api_key
+    DEFAULT_MODEL = "google/gemini-2.5-flash"
+
+    def __init__(self, api_key: str, model: Optional[str] = None):
+        self.api_key = api_key.strip() if api_key else ""
+        self.model = (model or getattr(settings, "OPENROUTER_MODEL", None) or self.DEFAULT_MODEL).strip()
+        self.client: Optional[AsyncOpenAI] = None
+
+        if not is_valid_openrouter_key(self.api_key):
+            logger.warning("OpenRouterProvider not initialized: missing or invalid OPENROUTER_API_KEY.")
+            return
+
         try:
             self.client = AsyncOpenAI(
                 base_url="https://openrouter.ai/api/v1",
                 api_key=self.api_key,
                 timeout=120.0,
             )
-            # Use configured OpenRouter model
-            self.model = settings.OPENROUTER_MODEL
             logger.info(f"OpenRouterProvider initialized with model: {self.model}")
         except Exception as e:
-            logger.error(f"Failed to initialize OpenRouterProvider: {e}")
+            logger.error(f"Failed to initialize OpenRouterProvider: {sanitize_error(e)}")
             self.client = None
 
+    def is_available(self) -> bool:
+        return self.client is not None and bool(self.api_key) and bool(self.model)
+
     async def refine_analysis(self, findings: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        if not self.client:
+        if not self.is_available():
             return None
         
         try:
@@ -40,11 +61,11 @@ class OpenRouterProvider(AIProvider):
             content = response.choices[0].message.content
             return self._parse_json(content)
         except Exception as e:
-            logger.error(f"OpenRouter refinement failed: {e}")
+            logger.warning(f"OpenRouter refinement failed ({type(e).__name__}): {sanitize_error(e)}")
             return None
 
     async def chat(self, message: str) -> Optional[str]:
-        if not self.client:
+        if not self.is_available():
             return None
 
         try:
@@ -62,11 +83,11 @@ class OpenRouterProvider(AIProvider):
             )
             return response.choices[0].message.content
         except Exception as e:
-            logger.error(f"OpenRouter chat failed: {e}")
+            logger.warning(f"OpenRouter chat failed ({type(e).__name__}): {sanitize_error(e)}")
             return None
 
     async def generate_dockerfile(self, prompt: str) -> Optional[str]:
-        if not self.client:
+        if not self.is_available():
             return None
 
         try:
@@ -90,5 +111,5 @@ class OpenRouterProvider(AIProvider):
                     text = "\n".join(lines[1:-1])
             return text
         except Exception as e:
-            logger.error(f"OpenRouter Dockerfile generation failed: {e}")
+            logger.warning(f"OpenRouter Dockerfile generation failed ({type(e).__name__}): {sanitize_error(e)}")
             return None

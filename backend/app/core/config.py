@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_MODEL: str = "google/gemini-2.5-flash"
     GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     CLERK_SECRET_KEY: str = ""
     
     # Admin Credentials

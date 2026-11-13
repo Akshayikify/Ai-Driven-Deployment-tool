@@ -1,7 +1,31 @@
+import re
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 
+def sanitize_error(err: Any) -> str:
+    """
+    Strips potential API keys, auth headers, and tokens from error strings
+    to ensure secrets are never leaked in application logs.
+    """
+    msg = str(err)
+    # Redact Authorization: Bearer tokens first (before raw key patterns)
+    msg = re.sub(r'Bearer\s+[a-zA-Z0-9_\.\-\+/=]+', 'Bearer [REDACTED_TOKEN]', msg)
+    # Redact common key prefixes and tokens
+    msg = re.sub(r'(gsk_|sk-or-v1-|sk-|AIzaSy)[a-zA-Z0-9_\-]{6,}', '[REDACTED_KEY]', msg)
+    msg = re.sub(r'key=[a-zA-Z0-9_\-]+', 'key=[REDACTED]', msg)
+    # Safety normalization if Bearer was ever followed by [REDACTED_KEY]
+    msg = re.sub(r'Bearer\s+\[REDACTED_KEY\]', 'Bearer [REDACTED_TOKEN]', msg)
+    return msg
+
 class AIProvider(ABC):
+    @property
+    def provider_name(self) -> str:
+        return self.__class__.__name__
+
+    def is_available(self) -> bool:
+        """Indicates whether this provider has a valid client and configuration."""
+        return True
+
     @abstractmethod
     async def refine_analysis(self, findings: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Refines the analysis using the specific AI provider."""

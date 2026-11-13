@@ -1,0 +1,55 @@
+# ── Virtual environments ──────────────────────────────────────────────────────
+aienv/
+.venv/
+venv/
+env/
+ENV/
+
+# ── Python bytecode & caches ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+
+# ── Secrets — NEVER bake into the image ──────────────────────────────────────
+.env
+.env.*
+*.env
+
+# ── Development / test artifacts ─────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/
+test_*.py
+*.log
+
+# ── OS / editor noise ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Project-specific generated / export directories ──────────────────────────
+research_export/
+
+# ── Docs & CI (not needed at runtime) ────────────────────────────────────────
+docs/
+*.md
+render-build.sh
+.github/
+
+# ── Windows / local tooling ───────────────────────────────────────────────────
+*.pid
+*.egg-info/
+dist/
+build/
+
